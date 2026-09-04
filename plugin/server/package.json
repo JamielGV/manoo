@@ -1,0 +1,16 @@
+{
+  "name": "computer-use-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "index.mjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@nut-tree-fork/nut-js": "^4.2.6",
+    "uiohook-napi": "^1.5.5",
+    "zod": "^4.5.4"
+  },
+  "allowScripts": {
+    "uiohook-napi@1.5.5": true
+  }
+}

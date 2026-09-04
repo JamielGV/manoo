@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "manoo-local",
+  "description": "Local test marketplace for Manoo (screen reading + mouse/keyboard control for Claude Code), by Corporación Jamiel.",
+  "owner": {
+    "name": "Jamiel Garcia Velazquez",
+    "email": "jamiel.garcia.velazquez@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "manoo",
+      "description": "Manoo gives Claude hands: it takes screenshots and controls the mouse/keyboard on this machine, so Claude can operate on-screen UI directly when you ask it to do something itself instead of describing it. By Corporación Jamiel.",
+      "author": {
+        "name": "Corporación Jamiel"
+      },
+      "category": "development",
+      "source": "./plugin"
+    }
+  ]
+}

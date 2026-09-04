@@ -1,0 +1,9 @@
+{
+  "name": "manoo",
+  "description": "Manoo — the hands Claude Code needs to act on your screen. Screenshot, click, type, scroll — so Claude can operate your desktop directly when you ask it to do something itself. Free-tier local prototype: everything runs on this machine, nothing is sent anywhere. By Corporación Jamiel.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Corporación Jamiel",
+    "email": "jamiel.garcia.velazquez@gmail.com"
+  }
+}

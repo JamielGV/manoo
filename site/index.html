@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Manoo — hands for Claude Code</title>
+<meta name="description" content="Manoo gives Claude Code hands: screenshot, click, type, scroll — so it can act on your screen directly. By Corporación Jamiel." />
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0d10;
+    --bg-soft: #12151a;
+    --text: #e8ecf1;
+    --text-dim: #8b93a1;
+    --accent: #ff8a3d;
+    --accent-soft: #ff8a3d22;
+    --border: #232830;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6rem 1.5rem 3rem;
+    text-align: center;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    padding: 0.3rem 0.9rem;
+    margin-bottom: 2rem;
+  }
+  .badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  h1 {
+    font-size: clamp(2.75rem, 9vw, 5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin: 0;
+    line-height: 1;
+  }
+  .hand-icon {
+    display: inline-block;
+    width: 1.1em;
+    height: 1.1em;
+    vertical-align: -0.12em;
+    transform: rotate(-8deg);
+    filter:
+      drop-shadow(0 0 3px #5fe8ff)
+      drop-shadow(0 0 10px #22c3ff)
+      drop-shadow(0 0 22px #0090ff88);
+  }
+  .footer-logo {
+    height: 1.4em;
+    width: auto;
+    vertical-align: -0.35em;
+    margin-right: 0.35em;
+  }
+  .tagline {
+    margin: 1.25rem 0 0;
+    font-size: clamp(1.05rem, 2.6vw, 1.35rem);
+    color: var(--text-dim);
+    max-width: 34rem;
+    line-height: 1.5;
+  }
+  .tagline strong { color: var(--text); font-weight: 600; }
+  .features {
+    margin-top: 3rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+    max-width: 40rem;
+  }
+  .chip {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    background: var(--bg-soft);
+    border-radius: 999px;
+    padding: 0.45rem 1rem;
+  }
+  .privacy {
+    margin-top: 2.5rem;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+  .privacy strong { color: var(--text); }
+  footer {
+    padding: 1.75rem 1.5rem 2.25rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--text-dim); }
+  .pricing {
+    margin-top: 3.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    justify-content: center;
+    width: 100%;
+    max-width: 44rem;
+  }
+  .plan {
+    flex: 1 1 16rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.75rem 1.5rem;
+    text-align: left;
+  }
+  .plan.pro { border-color: var(--accent); }
+  .plan h3 {
+    margin: 0 0 0.25rem;
+    font-size: 1.1rem;
+  }
+  .plan .price {
+    font-size: 1.9rem;
+    font-weight: 700;
+    margin: 0.5rem 0 1rem;
+  }
+  .plan .price span {
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--text-dim);
+  }
+  .plan ul {
+    margin: 0 0 1.5rem;
+    padding-left: 1.1rem;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+  .plan a.cta {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+    padding: 0.7rem 1rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  .plan.free a.cta {
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .plan.pro a.cta {
+    background: var(--accent);
+    color: #1a0f04;
+  }
+</style>
+</head>
+<body>
+  <main>
+    <span class="badge">Free tier available now</span>
+    <h1>
+      <svg class="hand-icon" viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <pattern id="mesh" width="9" height="9" patternUnits="userSpaceOnUse">
+            <rect width="9" height="9" fill="#04283f" />
+            <path d="M0 0H9M0 0V9" stroke="#3fd6ff" stroke-width="0.7" opacity="0.85" />
+          </pattern>
+        </defs>
+        <g fill="url(#mesh)" stroke="#5fe8ff" stroke-width="2" stroke-linejoin="round">
+          <rect x="25" y="55" width="50" height="52" rx="20" />
+          <rect x="30" y="25" width="10" height="35" rx="5" />
+          <rect x="42" y="14" width="10" height="46" rx="5" />
+          <rect x="54" y="10" width="10" height="50" rx="5" />
+          <rect x="66" y="17" width="10" height="41" rx="5" />
+          <rect x="12" y="52" width="11" height="32" rx="5.5" transform="rotate(-38 17.5 68)" />
+        </g>
+      </svg>
+      Manoo
+    </h1>
+    <p class="tagline">
+      Gives <strong>Claude Code</strong> hands. Screenshot, click, type,
+      scroll — so it can act on your screen directly when you ask it to
+      do something itself instead of describing the steps.
+    </p>
+    <div class="features">
+      <span class="chip">Screenshot &amp; act</span>
+      <span class="chip">Mouse &amp; keyboard control</span>
+      <span class="chip">Human takeover, always</span>
+      <span class="chip">Free tier</span>
+      <span class="chip">Pro: audit log</span>
+    </div>
+    <p class="privacy">
+      Runs <strong>100% locally</strong> on your machine. Nothing about
+      your screen is sent anywhere except to Claude itself, exactly like
+      any file Claude reads in a normal session.
+    </p>
+
+    <!-- Launch pricing — placeholder, confirm before real marketing push -->
+    <div class="pricing">
+      <div class="plan free">
+        <h3>Free</h3>
+        <div class="price">$0</div>
+        <ul>
+          <li>Screenshot, click, type, scroll</li>
+          <li>25 actions per session</li>
+          <li>Human takeover safety, always on</li>
+        </ul>
+        <a class="cta" href="mailto:jamiel.garcia.velazquez@gmail.com?subject=Manoo%20-%20instalación">Get the plugin</a>
+      </div>
+      <div class="plan pro">
+        <h3>Pro</h3>
+        <div class="price">$29 <span>USD / year</span></div>
+        <ul>
+          <li>Everything in Free, unlimited actions</li>
+          <li>Local audit log of every action</li>
+          <li>Priority support</li>
+        </ul>
+        <a class="cta" href="mailto:jamiel.garcia.velazquez@gmail.com?subject=Quiero%20Manoo%20Pro">Get Pro</a>
+      </div>
+    </div>
+  </main>
+  <footer>
+    <img class="footer-logo" src="assets/corporacion-jamiel-logo.png" alt="Corporación Jamiel" />
+    Manoo by <a href="#">Corporación Jamiel</a>
+  </footer>
+</body>
+</html>

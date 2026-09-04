@@ -1,0 +1,17 @@
+name = "manoo-payments"
+main = "src/index.mjs"
+compatibility_date = "2026-01-01"
+
+# Created by: wrangler kv namespace create PROCESSED_PAYMENTS
+# then paste the id it prints here.
+[[kv_namespaces]]
+binding = "PROCESSED_PAYMENTS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Secrets (set with `wrangler secret put <NAME>` — never put real values here):
+#   STRIPE_SECRET_KEY      — Stripe secret key (sk_live_...)
+#   STRIPE_WEBHOOK_SECRET  — Stripe webhook signing secret (whsec_...)
+#   MANOO_PRIVATE_KEY_PEM  — the Ed25519 private key from licensing/private-key.pem
+#   RESEND_API_KEY         — Resend API key for sending the license email
+#   SELLER_NOTIFY_EMAIL    — Jamiel's email, gets a copy of every sale
+#   EXPECTED_AMOUNT_CENTS  — the price you charge, in cents, e.g. "2900" for $29.00 — rejects wrong-amount payments
