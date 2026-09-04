@@ -1,5 +1,44 @@
 # Próximos pasos para vender Manoo
 
+## 🚀 Plan para vender pronto (hecho 2026-09-04)
+
+Tres pistas en paralelo — no hay que esperar a que una termine para
+empezar la siguiente. Nada de esto bloquea vender: **ya puedes vender hoy
+mismo de forma manual** (ver sección de abajo), así que la pista de
+clientes empieza ya, no al final.
+
+**Pista 1 — Conseguir clientes (empieza HOY, no esperes a nada más)**
+1. Hoy: avisa a 5-10 contactos que ya conozcas y que les sirva automatizar
+   tareas repetitivas en su compu (agencias, freelancers, dev shops) —
+   véndeles manual (sección 🟢 abajo). No necesitas la página ni Stripe
+   para esto.
+2. Esta semana: un post corto en un lugar donde ya haya gente usando
+   Claude Code (comunidad/Discord de Claude Code, r/ClaudeAI, X/Twitter)
+   mostrando Manoo en acción — un GIF corto del HUD neon + split-screen
+   funciona mejor que texto. Dime cuando quieras y te preparo el clip/post.
+
+**Pista 2 — Quitar la fricción para pagar (esta semana, casi todo gratis)**
+1. Publicar `site/index.html` en GitHub Pages — el repo ya es público,
+   solo falta activarlo en Settings → Pages. **Esto lo puedo hacer yo
+   ahora mismo** si me dices que sí (entro con el navegador ya logueado).
+2. Crear cuenta Stripe + Resend + Cloudflare (~30-40 min, gratis) siguiendo
+   `automation/SETUP.md` — una vez existan, corro
+   `automation/create-payment-link.mjs` y despliego el Worker, y el botón
+   "Get Pro" de la página pasa de mandarte un correo a cobrar solo.
+3. Reservar `manoo.is-a.dev` — requiere que TÚ hagas el PR (ese proyecto
+   pide explícitamente que no sea generado por IA); yo ya te dejé la
+   plantilla lista.
+
+**Pista 3 — Lo legal/marca (en paralelo, no bloquea vender)**
+- Registro de marca IMPI: conviene no tardar mucho por ser "primero en
+  presentar", pero no impide vender mientras se tramita.
+- Dominio propio (`manoo.ai`): no urgente, `is-a.dev` cubre mientras tanto.
+
+**Orden sugerido de esta semana:** día 1 (hoy) = primeros contactos +
+autorizas GitHub Pages. Día 2-3 = cuentas Stripe/Resend/Cloudflare. Día
+3-4 = Payment Link activo + primer post público. De ahí en adelante,
+vender es repetir la Pista 1 con más alcance.
+
 ## ✅ Ya hecho (gratis, listo)
 
 - Producto funcionando: Free (25 acciones/sesión) + Pro (ilimitado + audit log), con licencias firmadas Ed25519.
