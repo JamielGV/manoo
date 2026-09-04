@@ -20,11 +20,17 @@ machine.
     `@nut-tree-fork/nut-js`), exposing: `screenshot`, `cursor_position`,
     `mouse_move`, `left_click`, `right_click`, `middle_click`,
     `double_click`, `left_click_drag`, `scroll`, `type`, `key`,
-    `license_status`, `license_activate`
+    `split_screen`, `license_status`, `license_activate`
   - `server/license.mjs` — verifies Ed25519-signed license keys (public key
     only; cannot mint new licenses)
   - `server/audit.mjs` — Pro-only local audit log
     (`~/.local/share/manoo/audit.log`)
+  - `server/window-layout.mjs` — tiles the IDE window and the app Manoo is
+    driving into left/right halves via `wmctrl`, and pins the HUD overlay
+    window into the bottom-right corner. Finds the IDE window by walking
+    this process's own parent chain (not by title, which changes)
+  - `server/overlay-server.mjs` — local HTTP+SSE server behind the neon HUD
+    (see "Screen layout & HUD" below)
   - `skills/computer-use/SKILL.md` — teaches Claude the
     screenshot→reason→act→verify loop and safety rules (no password fields,
     confirm before destructive actions)
@@ -75,6 +81,25 @@ every time, because "corrige" starts with the letter it kept reporting).
 Only activity recent enough to plausibly mean "the human is touching
 something right now" counts.
 
+## Screen layout & HUD (implemented, verified)
+
+- **Split screen with the IDE:** on startup, `window-layout.mjs` tiles the
+  Claude Code / IDE window and whatever app Manoo is driving into left/right
+  halves of the work area (via `wmctrl`), so the user never loses sight of
+  the conversation while Manoo acts. The `split_screen` tool re-runs this on
+  demand — useful after opening a new target app window mid-task, or if the
+  layout drifts.
+- **Neon HUD overlay:** a small always-on-top window pinned to the
+  bottom-right corner (opened in Firefox, positioned via `wmctrl`) shows a
+  pulsing neon dot tracking the cursor on a mini-map, plus a flashing ticker
+  for the last thing typed or key pressed. Pushed live from the MCP server
+  over Server-Sent Events (`overlay-server.mjs`) — every mouse/click/
+  scroll/type/key tool feeds it, no extra calls needed. Excluded from
+  `split_screen`'s target-window detection so it's never mistaken for the
+  app being driven.
+- Both are best-effort: no X11 display, no `wmctrl`, or no Firefox just
+  means Manoo runs without them — never a hard failure.
+
 ## Test / iterate locally
 
 ```bash
@@ -98,9 +123,9 @@ Then restart the Claude Code session for the MCP server process to reload.
 - Linux/X11 only — will not work under Wayland.
 - No accessibility-tree reading — coordinates come from Claude visually
   reading screenshots, not structured UI metadata.
-- No license gating, usage metering, macro recording, or audit dashboard —
-  those are the planned paid-tier pieces (see project plan discussed with
-  Claude, not included in this repo yet).
+- No usage metering beyond the in-process free-tier cap, no macro
+  recording/replay, no audit dashboard UI (the audit log itself exists,
+  just no viewer for it yet).
 
 ## Naming
 
