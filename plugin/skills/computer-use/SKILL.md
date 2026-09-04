@@ -8,11 +8,25 @@ description: Use when the user asks Claude to interact with the screen directly 
 You have direct control of this machine's screen, mouse, and keyboard via the
 `manoo` MCP tools: `screenshot`, `cursor_position`, `mouse_move`,
 `left_click`, `right_click`, `middle_click`, `double_click`,
-`left_click_drag`, `scroll`, `type`, `key`, plus `license_status` and
-`license_activate`.
+`left_click_drag`, `scroll`, `type`, `key`, `split_screen`, plus
+`license_status` and `license_activate`.
 
 Everything runs locally on this machine. Nothing is sent anywhere else
 (Pro's audit log is also local-only).
+
+## The screen stays split with the IDE
+
+Manoo tiles the screen automatically on startup so the Claude Code / IDE
+window stays visible on one side while it drives the other app — the user
+should never lose sight of the conversation while Manoo is acting. This
+happens without you calling anything.
+
+If you open a new target app window mid-task (e.g. you launched it via a
+terminal command rather than clicking it into existence), call
+`split_screen` again afterward so that window gets tiled in too — the
+automatic split at startup only knew about windows that already existed
+then. It's also the fix if the layout ever drifts (a window got maximized,
+moved to another desktop, etc.).
 
 Free tier caps action tools (everything except `screenshot`,
 `cursor_position`, and the license tools) at 25 per session. If a tool

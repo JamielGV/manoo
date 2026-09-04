@@ -21,6 +21,7 @@ import { dirname } from "node:path";
 import { loadLicense, verifyLicenseString, LICENSE_FILE } from "./license.mjs";
 import { logAction, AUDIT_LOG_FILE } from "./audit.mjs";
 import { beginManooAction, consumeHumanInterference } from "./input-monitor.mjs";
+import { splitScreenWithIde } from "./window-layout.mjs";
 
 // nut-js defaults are tuned for animated, human-like movement. For
 // programmatic control we want it fast and deterministic.
@@ -170,6 +171,29 @@ server.registerTool(
   async () => {
     const p = await mouse.getPosition();
     return textResult(`x=${p.x}, y=${p.y}`);
+  }
+);
+
+server.registerTool(
+  "split_screen",
+  {
+    title: "Split the screen with the IDE",
+    description:
+      "Tile the screen so the Claude Code / IDE window and the app Manoo is " +
+      "driving sit side by side, so the user can watch what's happening in " +
+      "both at once. Runs automatically when Manoo starts up; call this " +
+      "again after opening a new target app window, or if the layout drifts.",
+    inputSchema: { ide_side: z.enum(["left", "right"]).optional().default("left") },
+  },
+  async ({ ide_side }) => {
+    const result = await splitScreenWithIde({ ideSide: ide_side });
+    if (!result.ok) {
+      return textResult(`Could not split the screen (${result.reason}).`);
+    }
+    return textResult(
+      `Split screen: IDE (${result.ide}) on the ${ide_side}` +
+      (result.target ? `, "${result.target}" on the other side.` : ", nothing else to place on the other side.")
+    );
   }
 );
 
@@ -347,6 +371,11 @@ server.registerTool(
     return textResult(`Pressed ${combo}`);
   })
 );
+
+// Split the screen right away so the IDE stays visible for the whole
+// session, not just once Manoo starts acting. Best-effort: a failure here
+// (no window manager, headless, wmctrl missing) shouldn't stop the server.
+await splitScreenWithIde().catch(() => {});
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
