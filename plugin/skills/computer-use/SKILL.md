@@ -28,6 +28,16 @@ automatic split at startup only knew about windows that already existed
 then. It's also the fix if the layout ever drifts (a window got maximized,
 moved to another desktop, etc.).
 
+## A neon HUD shows Manoo is working
+
+A small always-on-top window pinned to the bottom-right corner (titled
+"Manoo · overlay") shows a live neon dot tracking the cursor on a mini-map,
+plus a flashing ticker with whatever was just typed or which key was
+pressed. It opens automatically on startup and updates itself — you never
+call anything for this; every mouse/click/scroll/type/key tool already
+pushes to it. Best-effort: if there's no X11 display or Firefox isn't
+available, Manoo still works, it just runs without the HUD.
+
 Free tier caps action tools (everything except `screenshot`,
 `cursor_position`, and the license tools) at 25 per session. If a tool
 returns a "Free tier limit reached" message, tell the user plainly that

@@ -21,11 +21,35 @@ import { dirname } from "node:path";
 import { loadLicense, verifyLicenseString, LICENSE_FILE } from "./license.mjs";
 import { logAction, AUDIT_LOG_FILE } from "./audit.mjs";
 import { beginManooAction, consumeHumanInterference } from "./input-monitor.mjs";
-import { splitScreenWithIde } from "./window-layout.mjs";
+import { splitScreenWithIde, placeOverlayWindow } from "./window-layout.mjs";
+import { startOverlayServer } from "./overlay-server.mjs";
+import { spawn } from "node:child_process";
 
 // nut-js defaults are tuned for animated, human-like movement. For
 // programmatic control we want it fast and deterministic.
 mouse.config.mouseSpeed = 3000;
+
+// ---- HUD overlay --------------------------------------------------------
+// A small always-on-top window with a live neon dot tracking the cursor
+// and a ticker for what's being typed, so the user can tell Manoo is
+// working without staring at the exact pixel it's touching. Best-effort:
+// no X11 display, no wmctrl, no Firefox — Manoo still works, just quiet.
+let pushOverlay = () => {};
+try {
+  const overlay = await startOverlayServer();
+  const overlayWindow = spawn(
+    "firefox",
+    ["--new-window", overlay.url],
+    { detached: true, stdio: "ignore" }
+  );
+  overlayWindow.unref();
+  await placeOverlayWindow();
+  const screenW = await screen.width();
+  const screenH = await screen.height();
+  pushOverlay = (event) => overlay.push({ ...event, screenW, screenH });
+} catch {
+  // Best-effort HUD — see comment above.
+}
 
 // ---- Licensing / free-tier quota -------------------------------------
 
@@ -248,6 +272,7 @@ server.registerTool(
   gated("mouse_move", async ({ x, y }) => {
     beginManooAction(150);
     await mouse.setPosition(new Point(x, y));
+    pushOverlay({ kind: "mouse", x, y });
     return textResult(`Moved cursor to (${x}, ${y})`);
   })
 );
@@ -267,6 +292,7 @@ function registerClickTool(name, button, label) {
       }
       await mouse.click(button);
       const p = await mouse.getPosition();
+      pushOverlay({ kind: "mouse", x: p.x, y: p.y });
       return textResult(`${label} at (${p.x}, ${p.y})`);
     })
   );
@@ -290,6 +316,7 @@ server.registerTool(
     }
     await mouse.doubleClick(Button.LEFT);
     const p = await mouse.getPosition();
+    pushOverlay({ kind: "mouse", x: p.x, y: p.y });
     return textResult(`Double clicked at (${p.x}, ${p.y})`);
   })
 );
@@ -313,6 +340,7 @@ server.registerTool(
     await mouse.pressButton(Button.LEFT);
     await mouse.setPosition(new Point(end_x, end_y));
     await mouse.releaseButton(Button.LEFT);
+    pushOverlay({ kind: "mouse", x: end_x, y: end_y });
     return textResult(`Dragged from (${start_x}, ${start_y}) to (${end_x}, ${end_y})`);
   })
 );
@@ -336,6 +364,7 @@ server.registerTool(
       right: mouse.scrollRight,
     }[direction];
     await fn.call(mouse, amount);
+    pushOverlay({ kind: "scroll", text: `${direction} ${amount}` });
     return textResult(`Scrolled ${direction} by ${amount}`);
   })
 );
@@ -351,6 +380,7 @@ server.registerTool(
   gated("type", async ({ text }) => {
     beginManooAction(Math.max(200, text.length * 15));
     await keyboard.type(text);
+    pushOverlay({ kind: "type", text: text.length > 40 ? text.slice(0, 40) + "…" : text });
     return textResult(`Typed ${text.length} characters`);
   })
 );
@@ -368,6 +398,7 @@ server.registerTool(
     const keys = resolveKeys(combo);
     await keyboard.pressKey(...keys);
     await keyboard.releaseKey(...keys);
+    pushOverlay({ kind: "key", text: combo });
     return textResult(`Pressed ${combo}`);
   })
 );

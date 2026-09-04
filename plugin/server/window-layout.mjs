@@ -10,6 +10,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { readFile } from "node:fs/promises";
+import { OVERLAY_WINDOW_TITLE } from "./overlay-server.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -70,10 +71,14 @@ async function findIdeWindow(windows) {
 }
 
 /** Best-effort guess at "the other app Manoo is driving": any top-level
- * window that isn't the IDE, preferring the most recently mapped one. */
+ * window that isn't the IDE or Manoo's own HUD overlay, preferring the
+ * most recently mapped one. */
 function findTargetWindow(windows, ideWindow) {
   const candidates = windows.filter(
-    (w) => w.desktop >= 0 && (!ideWindow || w.id !== ideWindow.id)
+    (w) =>
+      w.desktop >= 0 &&
+      (!ideWindow || w.id !== ideWindow.id) &&
+      !w.title.includes(OVERLAY_WINDOW_TITLE)
   );
   return candidates[candidates.length - 1] || null;
 }
@@ -122,4 +127,51 @@ export async function splitScreenWithIde({ ideSide = "left" } = {}) {
     ide: ideWindow.title,
     target: targetWindow ? targetWindow.title : null,
   };
+}
+
+/** Pins the HUD overlay window (matched by its fixed title) into the
+ * bottom-right corner, always-on-top and out of the taskbar/pager. The
+ * overlay window is opened by index.mjs right before this is called, but
+ * it may take a moment to map — retries a few times. */
+export async function placeOverlayWindow({
+  width = 240,
+  height = 190,
+  attempts = 10,
+  delayMs = 300,
+} = {}) {
+  for (let i = 0; i < attempts; i++) {
+    const windows = await listWindows();
+    const matches = windows.filter((w) => w.title.includes(OVERLAY_WINDOW_TITLE));
+    const overlay = matches[matches.length - 1]; // most recently opened, if several
+    if (overlay) {
+      const wa = await getWorkArea();
+      const geom = {
+        x: wa.x + wa.w - width,
+        y: wa.y + wa.h - height,
+        w: width,
+        h: height,
+      };
+      await wmctrl(["-i", "-r", overlay.id, "-b", "remove,maximized_vert,maximized_horz"]);
+      await wmctrl(["-i", "-r", overlay.id, "-e", `0,${geom.x},${geom.y},${geom.w},${geom.h}`]);
+
+      // Firefox enforces its own minimum chrome width/height, silently
+      // overriding a request smaller than that — re-anchor to the corner
+      // using whatever size actually stuck, instead of assuming it fit.
+      const [placed] = (await listWindows()).filter((w) => w.id === overlay.id);
+      if (placed && (placed.w !== geom.w || placed.h !== geom.h)) {
+        const fixed = {
+          x: wa.x + wa.w - placed.w,
+          y: wa.y + wa.h - placed.h,
+          w: placed.w,
+          h: placed.h,
+        };
+        await wmctrl(["-i", "-r", overlay.id, "-e", `0,${fixed.x},${fixed.y},${fixed.w},${fixed.h}`]);
+      }
+
+      await wmctrl(["-i", "-r", overlay.id, "-b", "add,above,skip_taskbar,skip_pager"]);
+      return { ok: true };
+    }
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return { ok: false, reason: "overlay-window-not-found" };
 }
