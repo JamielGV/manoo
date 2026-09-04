@@ -1,7 +1,9 @@
 # Términos de Servicio — Manoo
 
 **Última actualización:** [completar fecha de publicación]
-**Responsable:** Corporación Jamiel — Jamiel García Velázquez
+**Responsable:** Jamiel García Velázquez, persona física, operando bajo
+el nombre comercial "Corporación Jamiel" (nombre comercial únicamente —
+no una persona moral registrada; se actualizará aquí si eso cambia).
 **Contacto:** jamiel.garcia.velazquez@gmail.com
 
 > ⚠️ Borrador inicial funcional. Antes de publicarlo o de tener ventas en volumen, conviene una revisión por un abogado (idealmente el mismo que te ayude con el registro de marca en IMPI), especialmente las cláusulas de responsabilidad y reembolsos.
@@ -13,13 +15,13 @@ Manoo es un plugin para Claude Code que da a Claude control del mouse, teclado y
 ## 2. Planes
 
 - **Free:** funciones completas, limitadas a 25 acciones por sesión del servidor.
-- **Pro:** acciones ilimitadas + registro de auditoría local de las acciones ejecutadas. Requiere una licencia activa emitida por Corporación Jamiel.
+- **Pro:** acciones ilimitadas + registro de auditoría local de las acciones ejecutadas. Requiere una licencia activa emitida por Jamiel García Velázquez ("Corporación Jamiel").
 
 ## 3. Licencias Pro
 
 - La licencia se emite de forma nominal, asociada al correo del comprador.
-- No es transferible a terceros sin autorización de Corporación Jamiel.
-- Corporación Jamiel puede revocar una licencia en caso de uso fraudulento, reventa no autorizada, o uso que viole estos términos.
+- No es transferible a terceros sin autorización de Jamiel García Velázquez ("Corporación Jamiel").
+- Jamiel García Velázquez ("Corporación Jamiel") puede revocar una licencia en caso de uso fraudulento, reventa no autorizada, o uso que viole estos términos.
 - La vigencia de la licencia se indica al momento de la compra (por defecto, 12 meses desde la emisión).
 
 ## 4. Uso aceptable
@@ -33,18 +35,18 @@ El usuario se compromete a:
 
 Manoo se entrega "tal cual" ("as is"), sin garantías de ningún tipo. Dado que Manoo controla el mouse y teclado del usuario:
 
-- Corporación Jamiel no es responsable de acciones no intencionadas ejecutadas por error de interpretación de Claude, fallas de la herramienta, o uso indebido por parte del usuario.
+- Jamiel García Velázquez ("Corporación Jamiel") no es responsable de acciones no intencionadas ejecutadas por error de interpretación de Claude, fallas de la herramienta, o uso indebido por parte del usuario.
 - El usuario es responsable de supervisar las acciones de Manoo mientras están en ejecución. Manoo incluye un mecanismo de detección de que el usuario tomó el control (mouse/teclado) que detiene la ejecución automáticamente, pero esto no sustituye la supervisión activa del usuario.
-- Corporación Jamiel no es responsable por pérdida de datos, daños indirectos, o consecuencias de acciones ejecutadas por Manoo sobre software de terceros.
+- Jamiel García Velázquez ("Corporación Jamiel") no es responsable por pérdida de datos, daños indirectos, o consecuencias de acciones ejecutadas por Manoo sobre software de terceros.
 
 ## 6. Pagos y reembolsos
 
-- Los pagos se procesan actualmente de forma manual (transferencia/Mercado Pago) hasta que se integre un procesador de pagos automatizado.
+- Los pagos se procesan actualmente de forma manual (transferencia, efectivo) hasta que se active el cobro automático vía Stripe.
 - Reembolsos: [definir política — sugerencia: 7 días naturales desde la emisión de la licencia, si no ha sido usada de forma abusiva].
 
 ## 7. Propiedad intelectual
 
-El código fuente de Manoo, la marca "Manoo" y los materiales asociados son propiedad de Corporación Jamiel. La licencia Pro otorga derecho de uso, no de redistribución ni modificación con fines comerciales.
+El código fuente de Manoo, la marca "Manoo" y los materiales asociados son propiedad de Jamiel García Velázquez ("Corporación Jamiel"). La licencia Pro otorga derecho de uso, no de redistribución ni modificación con fines comerciales.
 
 ## 8. Legislación aplicable
 

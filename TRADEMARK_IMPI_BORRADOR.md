@@ -1,6 +1,14 @@
 # Borrador de solicitud de marca — IMPI
 
-**Solicitante:** Corporación Jamiel (persona moral) — decidido: se registra a nombre de la empresa, no de Jamiel García Velázquez como persona física, para que la marca quede protegida a nivel de negocio (transferible, no atada a una sola persona).
+**Solicitante:** Jamiel García Velázquez, persona física — corregido
+2026-09-05: "Corporación Jamiel" **no está registrada** como persona
+moral (Jamiel confirmó que aún no la registra), así que no puede ser
+titular de una marca. El IMPI solo admite como solicitante a quien ya
+existe legalmente: una persona física o una persona moral ya constituida.
+Se puede registrar ante IMPI a nombre de Jamiel García Velázquez y usar
+"Corporación Jamiel" como nombre comercial/marca sin problema — y si más
+adelante se constituye la empresa, la marca se puede ceder/transferir a
+esa persona moral en ese momento.
 
 **Denominación:** Manoo
 **Tipo:** Nominativa (solo el texto "Manoo") — más simple y barata; una versión mixta con el logo puede agregarse después si el ícono se vuelve parte fuerte de la identidad.

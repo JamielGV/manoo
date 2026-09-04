@@ -1,19 +1,21 @@
 # Aviso de Privacidad — Manoo
 
-**Responsable:** Corporación Jamiel — Jamiel García Velázquez, Av. Zumpango #23 A, Analco, Teoloyucan, Estado de México.
+**Responsable:** Jamiel García Velázquez, persona física (opera bajo el
+nombre comercial "Corporación Jamiel", aún no registrada como persona
+moral), Av. Zumpango #23 A, Analco, Teoloyucan, Estado de México.
 **Contacto:** jamiel.garcia.velazquez@gmail.com
 
 > ⚠️ Borrador inicial basado en la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP). Revisar con un abogado antes de tener volumen real de usuarios/clientes, sobre todo si más adelante se agrega telemetría o un backend con más datos.
 
 ## 1. Qué datos recabamos
 
-Manoo, en su versión actual, **no envía datos de tu pantalla, mouse ni teclado a ningún servidor de Corporación Jamiel**. Todo el procesamiento (capturas de pantalla, control de mouse/teclado, registro de auditoría Pro) ocurre localmente en tu equipo.
+Manoo, en su versión actual, **no envía datos de tu pantalla, mouse ni teclado a ningún servidor nuestro**. Todo el procesamiento (capturas de pantalla, control de mouse/teclado, registro de auditoría Pro) ocurre localmente en tu equipo.
 
-Los únicos datos personales que Corporación Jamiel recaba y conserva son, si compras una licencia Pro:
+Los únicos datos personales que recabamos y conservamos son, si compras una licencia Pro:
 - Tu correo electrónico (para emitir y asociar la licencia).
 - Fecha de emisión y vigencia de la licencia.
 
-No recabamos datos de pago directamente — cuando se integre un procesador de pagos (Mercado Pago, Lemon Squeezy, etc.), ese procesador maneja tus datos de pago bajo su propio aviso de privacidad.
+No recabamos datos de pago directamente — el procesador de pagos (Stripe) maneja tus datos de pago bajo su propio aviso de privacidad.
 
 ## 2. Finalidad del tratamiento
 
