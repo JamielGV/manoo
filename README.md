@@ -150,15 +150,29 @@ waiting for the current action's own cleanup.
   than re-guessing "the last other window" on every call — found live that
   the naive guess could mistake an unrelated window the user opened in
   parallel (a file manager) for the app being driven.
-- **Neon cursor, only while processing (implemented, mechanism verified;
-  end-to-end visual not independently verifiable by Claude):** the real
-  system pointer is swapped for a neon-glow hand — not a separate window,
-  the actual cursor — for as long as Manoo is actively working, reverting
-  to the user's normal cursor `IDLE_MS` (60000ms) after it goes idle
-  rather than staying neon for the whole session. `index.mjs`'s
-  `markProcessing()` re-applies it and re-arms the idle timer on every
-  action, so a fast burst of actions reads as one continuous stretch
-  instead of flickering between each one. `cursor-theme.mjs` generates
+- **Neon cursor, only while processing (implemented, verified end-to-end
+  via the real server process — see below):** the real system pointer is
+  swapped for a neon-glow hand — not a separate window, the actual cursor
+  — for as long as Manoo is actively working, reverting to the user's
+  normal cursor `CURSOR_IDLE_MS` (3000ms) after its last actual action.
+  This runs on its **own** timer, separate from the split/minimize layout
+  (`LAYOUT_IDLE_MS`, 60000ms) — found live, per explicit user feedback,
+  that sharing one timer meant the cursor lingered neon for up to a full
+  minute after Manoo's last action just because the layout needed that
+  much buffer (see the layout note below for why). The cursor's whole
+  purpose is telling the user "Manoo is navigating/typing/clicking *right
+  now*" — it should track Manoo's actual actions closely, not the much
+  longer window the layout needs to stay stable. `index.mjs`'s
+  `markProcessing()` re-applies it and re-arms its own short idle timer on
+  every action, so a fast burst of actions (under ~3s apart) still reads
+  as one continuous stretch instead of flickering between each one, while
+  a real pause of a few seconds (Claude doing something else, not calling
+  Manoo) reverts it quickly. Verified live: forced the cursor timer longer
+  temporarily to observe `Xcursor.theme` switch to `manoo-neon` right
+  after an action and back to the original theme once the window elapsed,
+  while the layout (checked via `wmctrl` at the same moments) stayed split
+  throughout — confirming the two timers are genuinely independent.
+  `cursor-theme.mjs` generates
   the cursor once (`assets/gen-cursor.py`, Pillow + `xcursorgen`,
   committed as `assets/left_ptr` — the exact hand geometry and blue mesh
   fill from the site's `<svg class="hand-icon">`, scaled down, drawn at
@@ -202,8 +216,9 @@ waiting for the current action's own cleanup.
   entirely once the pulsing neon cursor could show "Manoo is working" on
   its own; a second indicator was redundant, per that same user's
   feedback, and was removed rather than reworked further.
-- **The target window minimizes (never closes) on the same idle timer,**
-  per explicit user feedback: leaving it merely covered behind the
+- **The target window minimizes (never closes) on the layout idle timer
+  (`LAYOUT_IDLE_MS`, 60000ms — not the cursor's separate, much shorter
+  one),** per explicit user feedback: leaving it merely covered behind the
   now-maximized IDE still left it one alt-tab away and cluttering the
   taskbar. `minimizeTargetWindow()` (`window-layout.mjs`) hides it via
   `wmctrl -b add,hidden`, using the same sticky target-window id
@@ -216,8 +231,8 @@ waiting for the current action's own cleanup.
   restored it. `restoreOriginalLayout()` does the same on shutdown, so
   Manoo stopping while the target is minimized doesn't leave it stuck
   hidden.
-- **IDE un-splits (and its chat scrolls to the latest message) on the same
-  idle timer** as the cursor — `maximizeIdeWindow()` fills the IDE back
+- **IDE un-splits (and its chat scrolls to the latest message) on that
+  same layout idle timer** — `maximizeIdeWindow()` fills the IDE back
   into the full work area, `focusIdeWindow()` raises and focuses it, then
   a plain `mouse.scrollDown` nudges its chat to the bottom, all from
   `goIdle()` in `index.mjs`. Deliberately uses explicit full-workarea

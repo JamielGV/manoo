@@ -53,20 +53,26 @@ mouse.config.mouseSpeed = 3000;
 // moment the user asks it to look at something — only once it's actually
 // about to act (an action tool call, not a read-only one), which is
 // exactly what markProcessing() below is called from.
-// Both only show up while Manoo is actively working — split screen so the
-// IDE stays visible while it acts, neon cursor so it's obvious it's Manoo
-// moving the mouse and not the user — and both revert once it goes idle
-// (IDE back to fullscreen, cursor back to normal), rather than staying on
-// for the whole session. A burst of several actions in quick succession
-// (screenshot, click, screenshot, click...) should read as one continuous
-// "processing" stretch rather than flickering on and off between each
-// one, so this re-arms a single idle timer on every action instead of
-// reverting right after each individual one.
-const IDLE_MS = 60000;
-let idleTimer = null;
+//
+// The cursor and the screen layout revert on two DIFFERENT timers, found
+// live to need different lengths for opposite reasons:
+//   - The cursor is the user's real-time "Manoo is navigating/typing/
+//     clicking right now" signal (explicit user feedback) — it should go
+//     back to the normal system cursor within a couple seconds of Manoo's
+//     last actual action, not linger while Claude Code is just thinking or
+//     doing unrelated work (editing files, running bash) between actions.
+//   - The split/minimize layout needs a much longer buffer: found live that
+//     reverting it too eagerly (15s) let it flip back mid-task, moving the
+//     target window out from under coordinates a click was about to use.
+// Sharing one timer meant fixing the layout bug (15s -> 60s) also made the
+// cursor linger for a full minute after Manoo's last real action — wrong
+// per the cursor's actual purpose. Two independent timers fix both.
+const CURSOR_IDLE_MS = 3000;
+const LAYOUT_IDLE_MS = 60000;
+let cursorIdleTimer = null;
+let layoutIdleTimer = null;
 
 async function goIdle() {
-  restoreCursorTheme();
   await maximizeIdeWindow().catch(() => {});
   // Minimize (never close) the window Manoo was driving — per explicit
   // user feedback, it shouldn't just sit covered behind the now-maximized
@@ -106,9 +112,12 @@ async function markProcessing() {
     applyNeonCursor().catch(() => {}),
     splitScreenWithIde().catch(() => ({ layoutChanged: false })),
   ]);
-  clearTimeout(idleTimer);
-  idleTimer = setTimeout(goIdle, IDLE_MS);
-  idleTimer.unref?.();
+  clearTimeout(cursorIdleTimer);
+  cursorIdleTimer = setTimeout(() => restoreCursorTheme(), CURSOR_IDLE_MS);
+  cursorIdleTimer.unref?.();
+  clearTimeout(layoutIdleTimer);
+  layoutIdleTimer = setTimeout(goIdle, LAYOUT_IDLE_MS);
+  layoutIdleTimer.unref?.();
   return Boolean(splitResult && splitResult.layoutChanged);
 }
 

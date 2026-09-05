@@ -69,12 +69,19 @@ re-read coordinates from it and retry.
 The actual system pointer — not a separate window, the real cursor itself
 — swaps to a neon-glow hand (matching Manoo's own icon) for as long as
 Manoo is actively working, and reverts to the user's normal cursor about
-60 seconds after it goes quiet. You never call anything for this; it's
-tied to every action tool automatically. A burst of several actions in a
-row reads as one continuous "processing" stretch rather than flickering
-the cursor on and off between each one. Best-effort: needs `xrdb` and
-`xsetroot` on an X11 `DISPLAY` — no X11, no those tools, Manoo still
-works, the cursor just stays whatever it already was.
+3 seconds after its last actual action — quickly, since its whole purpose
+is telling the user "Manoo is navigating/typing/clicking right now," not
+lingering after Manoo has moved on to something else. This is on its own
+timer, separate from the screen split (which stays up to 60 seconds, much
+longer — see above); the two used to share one timer, which meant the
+cursor stayed neon for up to a full minute after Manoo's last action just
+because the split needed that much buffer, which a real user correctly
+flagged as wrong. You never call anything for this; it's tied to every
+action tool automatically. A burst of several actions under ~3 seconds
+apart still reads as one continuous "processing" stretch rather than
+flickering the cursor on and off between each one. Best-effort: needs
+`xrdb` and `xsetroot` on an X11 `DISPLAY` — no X11, no those tools, Manoo
+still works, the cursor just stays whatever it already was.
 
 **Pass `x`/`y` to `type` so the cursor sits next to what's being typed.**
 `type` doesn't move the mouse on its own — if you clicked into a field
