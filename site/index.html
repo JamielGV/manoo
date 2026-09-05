@@ -199,11 +199,40 @@
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+  #lang-toggle {
+    position: fixed;
+    top: 1.1rem;
+    right: 1.1rem;
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+    font-size: 0.8rem;
+    z-index: 5;
+  }
+  #lang-toggle button {
+    appearance: none;
+    border: none;
+    background: var(--bg-soft);
+    color: var(--text-dim);
+    padding: 0.35rem 0.75rem;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #lang-toggle button[aria-pressed="true"] {
+    background: var(--accent);
+    color: #1a0f04;
+  }
 </style>
 </head>
 <body>
+  <div id="lang-toggle" role="group" aria-label="Language / Idioma">
+    <button type="button" data-lang="en">EN</button>
+    <button type="button" data-lang="es">ES</button>
+  </div>
   <main>
-    <span class="badge">Free tier available now</span>
+    <span class="badge" data-i18n="badge">Free tier available now</span>
     <h1>
       <svg class="hand-icon" viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
@@ -223,54 +252,122 @@
       </svg>
       Manoo
     </h1>
-    <p class="tagline">
+    <p class="tagline" data-i18n="tagline">
       Gives <strong>Claude Code</strong> hands. Screenshot, click, type,
       scroll — so it can act on your screen directly when you ask it to
       do something itself instead of describing the steps.
     </p>
     <div class="features">
-      <span class="chip">Screenshot &amp; act</span>
-      <span class="chip">Mouse &amp; keyboard control</span>
-      <span class="chip">Human takeover, always</span>
-      <span class="chip">Free tier</span>
-      <span class="chip">Pro: audit log</span>
+      <span class="chip" data-i18n="chip1">Screenshot &amp; act</span>
+      <span class="chip" data-i18n="chip2">Mouse &amp; keyboard control</span>
+      <span class="chip" data-i18n="chip3">Human takeover, always</span>
+      <span class="chip" data-i18n="chip4">Free tier</span>
+      <span class="chip" data-i18n="chip5">Pro: audit log</span>
     </div>
-    <p class="privacy">
+    <p class="privacy" data-i18n="privacy">
       Runs <strong>100% locally</strong> on your machine. Nothing about
       your screen is sent anywhere except to Claude itself, exactly like
       any file Claude reads in a normal session.
     </p>
 
-    <!-- Launch pricing — placeholder, confirm before real marketing push -->
+    <!-- Launch pricing — confirmed after a quick market pass: comparable
+         "computer use" agents (OpenOwl, etc.) charge $20-79/MONTH since
+         they run their own inference/hosting; Manoo runs 100% locally with
+         no server cost, so it's priced well under that, but above a
+         throwaway/entry price to reflect real value (unlimited actions +
+         audit log). $49/year, not $29, per that comparison. -->
     <div class="pricing">
       <div class="plan free">
-        <h3>Free</h3>
+        <h3 data-i18n="freeTitle">Free</h3>
         <div class="price">$0</div>
         <ul>
-          <li>Screenshot, click, type, scroll</li>
-          <li>25 actions per session</li>
-          <li>Human takeover safety, always on</li>
+          <li data-i18n="freeLi1">Screenshot, click, type, scroll</li>
+          <li data-i18n="freeLi2">25 actions per session</li>
+          <li data-i18n="freeLi3">Human takeover safety, always on</li>
         </ul>
-        <a class="cta" href="mailto:jamiel.garcia.velazquez@gmail.com?subject=Manoo%20-%20instalación">Get the plugin</a>
+        <a class="cta" href="mailto:jamiel.garcia.velazquez@gmail.com?subject=Manoo%20-%20instalación" data-i18n="freeCta">Get the plugin</a>
       </div>
       <div class="plan pro">
-        <h3>Pro</h3>
-        <div class="price">$29 <span>USD / year</span></div>
+        <h3 data-i18n="proTitle">Pro</h3>
+        <div class="price">$49 <span>USD / year</span></div>
         <ul>
-          <li>Everything in Free, unlimited actions</li>
-          <li>Local audit log of every action</li>
-          <li>Priority support</li>
+          <li data-i18n="proLi1">Everything in Free, unlimited actions</li>
+          <li data-i18n="proLi2">Local audit log of every action</li>
+          <li data-i18n="proLi3">Priority support</li>
         </ul>
-        <a class="cta" href="mailto:jamiel.garcia.velazquez@gmail.com?subject=Quiero%20Manoo%20Pro">Get Pro</a>
+        <a class="cta" href="mailto:jamiel.garcia.velazquez@gmail.com?subject=Quiero%20Manoo%20Pro" data-i18n="proCta">Get Pro</a>
       </div>
     </div>
   </main>
   <footer>
     <img class="footer-logo" src="assets/corporacion-jamiel-logo.png" alt="Corporación Jamiel" />
-    Manoo by <a href="#">Corporación Jamiel</a>
+    <span data-i18n="footer">Manoo by <a href="#">Corporación Jamiel</a></span>
   </footer>
   <div id="email-toast" role="status"></div>
   <script>
+    // Bilingual copy — kept as one JS dictionary rather than duplicated
+    // markup, so there's exactly one place to edit each string. Defaults
+    // to Spanish if the browser's language is Spanish, English otherwise;
+    // remembers an explicit toggle choice in localStorage (per-visitor,
+    // never sent anywhere) so it sticks across visits.
+    var STRINGS = {
+      badge: { en: 'Free tier available now', es: 'Nivel gratis disponible ya' },
+      tagline: {
+        en: 'Gives <strong>Claude Code</strong> hands. Screenshot, click, type, scroll — so it can act on your screen directly when you ask it to do something itself instead of describing the steps.',
+        es: 'Le da manos a <strong>Claude Code</strong>. Captura de pantalla, clic, escritura, scroll — para que actúe directamente en tu pantalla cuando le pidas que haga algo él mismo en vez de solo describir los pasos.'
+      },
+      chip1: { en: 'Screenshot & act', es: 'Captura y actúa' },
+      chip2: { en: 'Mouse & keyboard control', es: 'Control de mouse y teclado' },
+      chip3: { en: 'Human takeover, always', es: 'El humano siempre tiene el control' },
+      chip4: { en: 'Free tier', es: 'Nivel gratis' },
+      chip5: { en: 'Pro: audit log', es: 'Pro: registro de auditoría' },
+      privacy: {
+        en: 'Runs <strong>100% locally</strong> on your machine. Nothing about your screen is sent anywhere except to Claude itself, exactly like any file Claude reads in a normal session.',
+        es: 'Corre <strong>100% en tu máquina</strong>. Nada de tu pantalla se envía a ningún lado excepto a Claude mismo, igual que cualquier archivo que Claude lea en una sesión normal.'
+      },
+      freeTitle: { en: 'Free', es: 'Gratis' },
+      freeLi1: { en: 'Screenshot, click, type, scroll', es: 'Captura, clic, escritura, scroll' },
+      freeLi2: { en: '25 actions per session', es: '25 acciones por sesión' },
+      freeLi3: { en: 'Human takeover safety, always on', es: 'Seguridad de control humano, siempre activa' },
+      freeCta: { en: 'Get the plugin', es: 'Obtener el plugin' },
+      proTitle: { en: 'Pro', es: 'Pro' },
+      proLi1: { en: 'Everything in Free, unlimited actions', es: 'Todo lo de Free, acciones ilimitadas' },
+      proLi2: { en: 'Local audit log of every action', es: 'Registro de auditoría local de cada acción' },
+      proLi3: { en: 'Priority support', es: 'Soporte prioritario' },
+      proCta: { en: 'Get Pro', es: 'Obtener Pro' },
+      footer: { en: 'Manoo by <a href="#">Corporación Jamiel</a>', es: 'Manoo por <a href="#">Corporación Jamiel</a>' },
+      emailCopied: { en: 'Email copied: ', es: 'Correo copiado: ' }
+    };
+
+    var currentLang = 'en';
+
+    function applyLang(lang) {
+      currentLang = lang;
+      document.documentElement.lang = lang;
+      document.querySelectorAll('[data-i18n]').forEach(function (el) {
+        var entry = STRINGS[el.getAttribute('data-i18n')];
+        if (entry && entry[lang]) el.innerHTML = entry[lang];
+      });
+      document.querySelectorAll('#lang-toggle button').forEach(function (btn) {
+        btn.setAttribute('aria-pressed', String(btn.getAttribute('data-lang') === lang));
+      });
+    }
+
+    (function () {
+      var saved = null;
+      try { saved = localStorage.getItem('manoo-lang'); } catch (e) {}
+      var initial = saved || (navigator.language && navigator.language.slice(0, 2) === 'es' ? 'es' : 'en');
+      applyLang(initial);
+
+      document.querySelectorAll('#lang-toggle button').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var lang = btn.getAttribute('data-lang');
+          applyLang(lang);
+          try { localStorage.setItem('manoo-lang', lang); } catch (e) {}
+        });
+      });
+    })();
+
     // The buttons below are still real mailto: links (so a visitor with a
     // configured mail client gets a compose window as before) — this just
     // also copies the address to the clipboard and shows it, so someone
@@ -286,7 +383,7 @@
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(decoded).catch(function () {});
           }
-          toast.textContent = 'Correo copiado: ' + decoded;
+          toast.textContent = STRINGS.emailCopied[currentLang] + decoded;
           toast.classList.add('show');
           clearTimeout(hideTimer);
           hideTimer = setTimeout(function () {
