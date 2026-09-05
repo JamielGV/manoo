@@ -161,6 +161,19 @@ waiting for the current action's own cleanup.
   ever running (Node quirk, not a wmctrl one). Each module's own `exit`
   listener is unaffected by that and still fires independently, since Node
   always runs every `exit` listener regardless of who ends the process.
+  Same `kill -9` (SIGKILL) gap as the mouse lock, and for the same
+  reason — nothing running inside the process being killed can react to
+  it. Worst case the windows are left wherever they were; re-running
+  `split_screen` or just resizing them by hand fixes it, same as any
+  normal window.
+- Also worth knowing: the plugin's installed *code* updates on
+  `claude plugin install`, but an MCP server process already running
+  keeps running the version it started with — reinstalling doesn't
+  restart it. A session that reinstalls the plugin mid-conversation (as
+  happened during development) needs the old server process explicitly
+  ended (`kill` its PID, found via `ps aux | grep index.mjs`) for the next
+  tool call to spawn a fresh one with the new code; otherwise the fixes
+  above don't apply until the whole Claude Code session restarts.
 - Both split-screen and the HUD are best-effort: no X11 display, no
   `wmctrl`, or no Firefox just means Manoo runs without them — never a
   hard failure.
