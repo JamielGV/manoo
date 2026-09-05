@@ -84,12 +84,25 @@ async function goIdle() {
  * be settled before a click fires, or it could land on the wrong window
  * mid-transition. The cursor swap doesn't need the same guarantee, but is
  * awaited too rather than fired-and-forgotten, so a slow xsetroot call
- * can't race a fast handler. */
+ * can't race a fast handler.
+ *
+ * Returns whether the split just moved a window that wasn't already in
+ * split position — i.e. this call transitioned the layout from idle
+ * (target window full-screen) into split, rather than re-asserting a
+ * split that was already in place. `gated()` uses this to abort the
+ * action rather than run it: found live that a click computed from a
+ * screenshot taken while idle landed on the IDE instead of the intended
+ * window, because the split moved the target out from under it in this
+ * same call, before the click fired. */
 async function markProcessing() {
-  await Promise.all([applyNeonCursor().catch(() => {}), splitScreenWithIde().catch(() => {})]);
+  const [, splitResult] = await Promise.all([
+    applyNeonCursor().catch(() => {}),
+    splitScreenWithIde().catch(() => ({ layoutChanged: false })),
+  ]);
   clearTimeout(idleTimer);
   idleTimer = setTimeout(goIdle, IDLE_MS);
   idleTimer.unref?.();
+  return Boolean(splitResult && splitResult.layoutChanged);
 }
 
 // ---- Licensing / free-tier quota -------------------------------------
@@ -127,10 +140,18 @@ function handoffMessage({ type, detail }) {
 /** Wraps an action tool handler with human-handoff, free-tier quota, and Pro audit log. */
 function gated(name, handler) {
   return async (args) => {
-    await markProcessing();
+    const layoutJustChanged = await markProcessing();
+    // Always consume interference, even if we're about to abort for the
+    // layout-changed reason below — an unconsumed flag would otherwise
+    // wrongly surface on some later, unrelated action.
     const interference = consumeHumanInterference();
     if (interference) {
       return handoffMessage(interference);
+    }
+    if (layoutJustChanged) {
+      return textResult(
+        `La pantalla se acaba de dividir de nuevo con el IDE justo antes de esta acción — la ventana que ibas a usar pudo haberse movido, así que las coordenadas de una captura anterior ya no son confiables. No se ejecutó "${name}". Toma una nueva captura (screenshot) y repite la acción con las coordenadas actualizadas.`
+      );
     }
     if (!isPro()) {
       if (actionsUsed >= FREE_ACTION_LIMIT) {

@@ -160,6 +160,33 @@ export async function splitScreenWithIde({ ideSide = "left" } = {}) {
   const ideGeom = ideSide === "left" ? leftHalf : rightHalf;
   const targetGeom = ideSide === "left" ? rightHalf : leftHalf;
 
+  // Whether either window actually needs to move — i.e. the layout wasn't
+  // already in this split shape. Reported back so a coordinate-based action
+  // in the same gated() call (see index.mjs) can tell whether the (x, y) it
+  // was given, computed from a screenshot taken before this call, still
+  // points at the same window. Found live: going from idle (target window
+  // full-screen) straight into an action moved the target window out from
+  // under a click aimed at it by a stale, pre-split screenshot, and the
+  // click (and the `type` that followed it) landed on the IDE instead.
+  // Tolerance, not exact equality: confirmed live that a window can settle
+  // a few (or several dozen) pixels off the exact geometry `-e` asked for
+  // — GTK client-side decorations/shadow margins mean what `wmctrl -e`
+  // requests and what `wmctrl -lG` reports back afterward aren't always
+  // the same reference frame, and this offset is stable, not something
+  // placeWindow's own retry loop can converge away. Exact-match here would
+  // report layoutChanged on EVERY call for such a window, permanently
+  // aborting every action after the first split. 100px comfortably covers
+  // that kind of decoration offset while still catching a real change
+  // (going from full-screen to half-screen is a 720px+ jump).
+  const GEOM_TOLERANCE = 100;
+  const geomClose = (w, g) =>
+    Math.abs(w.x - g.x) <= GEOM_TOLERANCE &&
+    Math.abs(w.y - g.y) <= GEOM_TOLERANCE &&
+    Math.abs(w.w - g.w) <= GEOM_TOLERANCE &&
+    Math.abs(w.h - g.h) <= GEOM_TOLERANCE;
+  const layoutChanged =
+    !geomClose(ideWindow, ideGeom) || (targetWindow ? !geomClose(targetWindow, targetGeom) : false);
+
   await placeWindow(ideWindow.id, ideGeom);
 
   if (targetWindow) {
@@ -170,6 +197,7 @@ export async function splitScreenWithIde({ ideSide = "left" } = {}) {
     ok: true,
     ide: ideWindow.title,
     target: targetWindow ? targetWindow.title : null,
+    layoutChanged,
   };
 }
 

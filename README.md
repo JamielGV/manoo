@@ -164,20 +164,29 @@ waiting for the current action's own cleanup.
   fill from the site's `<svg class="hand-icon">`, scaled down, drawn at
   4x internal resolution and downsampled for crisp edges, with a 4-frame
   pulsing glow), installs the cursor image at `~/.icons/manoo-neon/
-  cursors/left_ptr`, and swaps it in live via `xsetroot -cursor_name
-  left_ptr` with `XCURSOR_THEME=manoo-neon` set for just that call — a
-  direct X11 `DISPLAY` call, deliberately **not** `xfconf-query`/D-Bus,
-  after finding live that an xfconf-query `-s` issued from this MCP
-  server reported success and even read back correctly from a second
+  cursors/left_ptr`, and swaps it in live by writing `Xcursor.theme`
+  straight into the X server's RESOURCE_MANAGER property via `xrdb
+  -merge -` (a direct X11 `DISPLAY` connection, no D-Bus), then nudging
+  with `xsetroot -cursor_name left_ptr` so the change is picked up
+  immediately — deliberately **not** `xfconf-query`/D-Bus, and **not**
+  `xsetroot` alone either. Two other mechanisms were tried and ruled out
+  first, both process-scoped failures (never reproduced from a plain
+  interactive shell): xfconf-query `-s` issued from this MCP server
+  reported success and even read back correctly from a second
   xfconf-query call in the *same* process, but was completely invisible
   to every other process on the machine checked immediately after
-  (matching D-Bus socket device/inode, matching uid — so not an obvious
-  sandbox/namespace mismatch, just consistently ineffective from outside
-  that one process). Mouse/keyboard/screenshots all go over that same
-  `DISPLAY` connection and work fine, so switching the cursor the same
-  way sidesteps whatever that isolation is rather than fighting it.
-  Restores the user's original theme (captured once via `xrdb -query`)
-  the same way — also via `xsetroot`, also bypassing D-Bus.
+  (matching D-Bus socket device/inode, matching uid — root cause never
+  identified); `xsetroot` alone only ever sets the ROOT window's cursor,
+  which doesn't propagate to already-open GTK app windows (they cache
+  their own cursor and only pick it up via XSETTINGS, which xsetroot
+  never touches) — confirmed live when a user reported not seeing the
+  neon cursor even on the bare desktop. Mouse/keyboard/screenshots all go
+  over the same `DISPLAY` connection and work fine, so switching the
+  cursor via `xrdb` sidesteps whatever that xfconf isolation is rather
+  than fighting it, while still actually propagating to app windows the
+  way root-only `xsetroot` can't. Restores the user's original theme
+  (captured once via `xrdb -query`) the same way, via `xrdb -merge -` +
+  `xsetroot`.
   **This is the result of several rounds of real user feedback**, in
   order: a detached corner window with a mini-map and a proxy dot (wrong
   — "that's not what neon cursor glow means") → a plain glowing dot as
@@ -252,6 +261,22 @@ waiting for the current action's own cleanup.
 - Split-screen and the cursor swap are both best-effort: no X11 display,
   no `wmctrl`, no `xsetroot` — Manoo still works, just without that
   particular touch.
+- **Coordinate-based actions abort if the split just moved a window
+  (implemented, verified end-to-end).** Found live: a click computed from
+  a screenshot taken while idle (target window full-screen) landed on the
+  IDE instead, because going idle→processing moves the target window out
+  from under it in the very same `gated()` call, before the click fires —
+  reproduced with a real `type` call whose text landed in the IDE's chat
+  box instead of the intended window. `splitScreenWithIde()` now reports
+  `layoutChanged` (whether either window needed to move to reach split
+  position, using a 100px tolerance rather than exact equality — GTK
+  client-side decorations mean a window can settle a stable few-to-several-
+  dozen pixels off the exact geometry `wmctrl -e` requested, which exact
+  equality would misread as "still changing" forever). When `layoutChanged`
+  is true, `gated()` aborts the action entirely (nothing is clicked/typed)
+  and returns a message asking for a fresh screenshot before retrying —
+  verified this actually stops the wrong-window misfire, then verified a
+  screenshot+retry immediately afterward lands correctly.
 
 ## Test / iterate locally
 

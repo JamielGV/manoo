@@ -4,23 +4,30 @@
 // user reported it wasn't what "neon cursor" should mean, and they were
 // right — a detached mini-map dot isn't a glow on the actual pointer).
 //
-// Talks to the X server directly (`xsetroot`, over the same DISPLAY
-// connection nut-js already uses for mouse/keyboard/screenshots) rather
-// than going through xfconf/D-Bus. Found live: an xfconf-query -s from
-// inside this MCP server reported success and even read back correctly
-// from a second xfconf-query call in the same process, but was
-// completely invisible to every other process on the machine (matching
-// device/inode for the D-Bus socket, matching uid — so not an obvious
-// namespace mismatch, just consistently ineffective) — Antigravity (the
-// IDE this was built and tested in) apparently isolates D-Bus for its
-// extension host in some way that doesn't affect the plain X11 DISPLAY
-// socket. Since mouse/keyboard/screenshots all work fine over that same
-// DISPLAY connection, changing the cursor the same way sidesteps
-// whatever that isolation is instead of fighting it.
+// Writes Xcursor.theme straight into the X server's RESOURCE_MANAGER
+// property via `xrdb -merge -` (a pure X11 DISPLAY connection, no D-Bus),
+// then nudges the root cursor with `xsetroot -cursor_name left_ptr` so the
+// change is picked up immediately. Confirmed live, run manually from an
+// interactive shell, that this combination IS visible over an actual app
+// window Manoo was driving, not just the bare desktop background. Two
+// other mechanisms were tried first and ruled out from inside this MCP
+// server's process specifically (not in general — each failure was
+// process-scoped, never reproduced from a plain interactive shell):
+//   - xfconf-query (XFCE's D-Bus-backed settings store): reported success
+//     and even read back correctly from a second xfconf-query call in the
+//     SAME process, but was invisible to every other process on the
+//     machine — same D-Bus socket device/inode, same uid, so not an
+//     obvious sandbox/namespace mismatch, root cause never identified.
+//   - xsetroot alone (no xrdb): only ever sets the ROOT window's cursor —
+//     doesn't propagate to already-open GTK app windows, which cache their
+//     own cursor and only pick up a change via XSETTINGS (which xsetroot
+//     never touches). Looked "reliable" in isolated testing but was
+//     actually invisible everywhere that matters — confirmed live when a
+//     user reported not seeing it even on the bare desktop.
 //
-// Best-effort throughout: no `xsetroot`, no X11, anything — Manoo still
+// Best-effort throughout: no `xrdb`/`xsetroot`, no X11 — Manoo still
 // works, the real cursor just stays whatever it already was.
-import { execFile, execFileSync } from "node:child_process";
+import { execFile, execFileSync, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdir, copyFile, symlink, unlink } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -39,62 +46,88 @@ async function installThemeIfNeeded() {
   if (themeInstalled) return;
   const cursorsDir = join(THEME_DIR, "cursors");
   await mkdir(cursorsDir, { recursive: true });
-  await copyFile(ASSET_CURSOR, join(cursorsDir, "left_ptr"));
+  const dest = join(cursorsDir, "left_ptr");
+  await copyFile(ASSET_CURSOR, dest);
+  for (const alias of ["default", "arrow", "top_left_arrow"]) {
+    const aliasPath = join(cursorsDir, alias);
+    try {
+      await unlink(aliasPath);
+    } catch {
+      // didn't exist yet — fine
+    }
+    await symlink("left_ptr", aliasPath);
+  }
+  await writeFileTheme();
   themeInstalled = true;
 }
 
-/** Best-effort read of the cursor theme currently in effect, straight
- * from the X resource database (no xfconf/D-Bus involved) — used only to
- * know what to switch back to. Falls back to a sane default if the
- * resource isn't set (also normal — not every system defines it). */
-async function getCurrentThemeName() {
-  try {
-    const { stdout } = await execFileAsync("xrdb", ["-query"]);
-    const m = stdout.match(/^Xcursor\.theme:\s*(\S+)$/m);
-    return m ? m[1] : null;
-  } catch {
-    return null;
-  }
+async function writeFileTheme() {
+  const { writeFile } = await import("node:fs/promises");
+  await writeFile(
+    join(THEME_DIR, "index.theme"),
+    `[Icon Theme]\nName=Manoo Neon\nInherits=${originalThemeName || "Adwaita"}\n`,
+    "utf8"
+  );
 }
 
-function setRootCursor(themeName) {
-  return execFileAsync("xsetroot", ["-cursor_name", "left_ptr"], {
-    env: { ...process.env, XCURSOR_THEME: themeName },
+async function getCurrentThemeName() {
+  const { stdout } = await execFileAsync("xrdb", ["-query"]);
+  const m = stdout.match(/^Xcursor\.theme:\s*(\S+)$/m);
+  return m ? m[1] : null;
+}
+
+/** Writes Xcursor.theme straight into the X server's RESOURCE_MANAGER
+ * property via `xrdb -merge` (pure X11 DISPLAY connection, no D-Bus) and
+ * then nudges the root cursor with `xsetroot` so the change is picked up
+ * immediately rather than waiting for something else to notice. Confirmed
+ * live: doing exactly this from an interactive shell made the neon
+ * cursor visible over the target app window Manoo was driving — xfconf-
+ * query (D-Bus) and xsetroot with an XCURSOR_THEME env override (which
+ * doesn't touch Xresources at all) were each tried first and didn't
+ * visibly work from this MCP server's process specifically. */
+function setThemeViaXrdb(themeName) {
+  return new Promise((resolve) => {
+    const merge = spawn("xrdb", ["-merge", "-"], { stdio: ["pipe", "ignore", "ignore"] });
+    merge.stdin.write(`Xcursor.theme: ${themeName}\n`);
+    merge.stdin.end();
+    merge.on("exit", () => {
+      execFileAsync("xsetroot", ["-cursor_name", "left_ptr"])
+        .catch(() => {})
+        .then(resolve);
+    });
+    merge.on("error", () => resolve());
   });
 }
 
 /** Switches the real cursor to the neon-glow version. No-op (never
- * throws) if there's no X11/xsetroot or anything else goes wrong — this
- * is a nice-to-have, never something an action should fail over. */
+ * throws) if this isn't an XFCE session or anything else goes wrong —
+ * this is a nice-to-have, never something an action should fail over. */
 export async function applyNeonCursor() {
   try {
     if (originalThemeName === null) {
-      originalThemeName = await getCurrentThemeName();
+      originalThemeName = (await getCurrentThemeName()) || "Adwaita";
     }
     await installThemeIfNeeded();
-    await setRootCursor(THEME_NAME);
+    await setThemeViaXrdb(THEME_NAME);
   } catch {
     // Best-effort — see comment above.
   }
 }
 
 function restoreSync() {
-  if (!themeInstalled) return; // neon cursor was never actually applied
+  if (!originalThemeName) return;
   try {
-    // If the original theme name couldn't be detected, still ask for a
-    // plain left_ptr without our override — falls back to whatever the
-    // environment/Xresources already resolve to, rather than leaving the
-    // neon one stuck on because we didn't know what to name.
-    const env = originalThemeName
-      ? { ...process.env, XCURSOR_THEME: originalThemeName }
-      : process.env;
-    execFileSync("xsetroot", ["-cursor_name", "left_ptr"], { env, stdio: "ignore" });
+    execFileSync("xrdb", ["-merge", "-"], {
+      input: `Xcursor.theme: ${originalThemeName}\n`,
+      stdio: ["pipe", "ignore", "ignore"],
+    });
+    execFileSync("xsetroot", ["-cursor_name", "left_ptr"], { stdio: "ignore" });
   } catch {
     // best-effort — nothing more to do synchronously at exit
   }
 }
 
-/** Puts the user's real cursor back — called when Manoo goes idle
+/** Puts the user's real cursor theme back — called when Manoo goes idle
  * between tasks and again when it stops operating entirely, alongside
  * the window-layout and mouse-lock restores. */
 export function restoreCursorTheme() {

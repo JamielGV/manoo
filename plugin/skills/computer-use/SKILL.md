@@ -55,6 +55,15 @@ closed, plugin reloaded, etc.) both windows are put back to their
 original position and size — the screen returns to how it was before
 Manoo touched it.
 
+**If an action tool replies that the screen "just split again" instead of
+doing what you asked, that's not an error to work around — take a new
+screenshot and repeat the action.** This happens the first time you act
+after Manoo has been idle for a while: the split moves the target window
+out from under any coordinates you computed from an older, pre-split
+screenshot, so Manoo refuses to click/type blindly and aborts instead.
+The very next screenshot will show the settled split layout — just
+re-read coordinates from it and retry.
+
 ## The real cursor glows neon only while actually processing
 
 The actual system pointer — not a separate window, the real cursor itself
@@ -63,9 +72,9 @@ Manoo is actively working, and reverts to the user's normal cursor about
 60 seconds after it goes quiet. You never call anything for this; it's
 tied to every action tool automatically. A burst of several actions in a
 row reads as one continuous "processing" stretch rather than flickering
-the cursor on and off between each one. Best-effort: needs `xsetroot` and
-an X11 `DISPLAY` — no X11, no `xsetroot`, Manoo still works, the cursor
-just stays whatever it already was.
+the cursor on and off between each one. Best-effort: needs `xrdb` and
+`xsetroot` on an X11 `DISPLAY` — no X11, no those tools, Manoo still
+works, the cursor just stays whatever it already was.
 
 There is deliberately no separate HUD window anymore (an earlier version
 had one, first as a Firefox window — which a real user correctly pointed
