@@ -21,7 +21,7 @@ import { dirname } from "node:path";
 import { loadLicense, verifyLicenseString, LICENSE_FILE } from "./license.mjs";
 import { logAction, AUDIT_LOG_FILE } from "./audit.mjs";
 import { beginManooAction, beginEscapeAction, consumeHumanInterference, onEmergencyStop } from "./input-monitor.mjs";
-import { splitScreenWithIde, maximizeIdeWindow, focusIdeWindow, restoreOriginalLayout } from "./window-layout.mjs";
+import { splitScreenWithIde, maximizeIdeWindow, minimizeTargetWindow, focusIdeWindow, restoreOriginalLayout } from "./window-layout.mjs";
 import { withMouseLocked, emergencyUnlock } from "./mouse-lock.mjs";
 import { applyNeonCursor, restoreCursorTheme } from "./cursor-theme.mjs";
 
@@ -68,6 +68,13 @@ let idleTimer = null;
 async function goIdle() {
   restoreCursorTheme();
   await maximizeIdeWindow().catch(() => {});
+  // Minimize (never close) the window Manoo was driving — per explicit
+  // user feedback, it shouldn't just sit covered behind the now-maximized
+  // IDE (still one alt-tab away, still cluttering the taskbar) once Manoo
+  // is done with it for now. splitScreenWithIde() un-minimizes it again
+  // automatically the next time it's needed (placeWindow() clears the
+  // hidden state as part of positioning it).
+  await minimizeTargetWindow().catch(() => {});
   // Bring the IDE forward and scroll its chat to the latest message —
   // otherwise the user gets the IDE back full-screen but possibly still
   // scrolled to wherever it was mid-task, not what Claude just said.
@@ -445,11 +452,14 @@ server.registerTool(
   {
     title: "Type text",
     description:
-      "Type text at the current cursor/focus position, as if typed on the keyboard. Never use this to type passwords or other credentials.",
-    inputSchema: { text: z.string() },
+      "Type text at the current cursor/focus position, as if typed on the keyboard. Pass x/y (the text field you clicked into, or wherever the text is about to appear) to move the mouse there first — so the neon cursor visibly sits next to the text as it's typed, rather than wherever it was last left. Never use this to type passwords or other credentials.",
+    inputSchema: { text: z.string(), x: z.number().int().optional(), y: z.number().int().optional() },
   },
-  gated("type", async ({ text }) => {
+  gated("type", async ({ text, x, y }) => {
     beginManooAction(Math.max(200, text.length * 15));
+    if (x !== undefined && y !== undefined) {
+      await withMouseLocked(() => mouse.setPosition(new Point(x, y)));
+    }
     await keyboard.type(text);
     return textResult(`Typed ${text.length} characters`);
   })

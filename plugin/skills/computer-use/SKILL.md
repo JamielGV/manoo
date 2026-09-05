@@ -76,6 +76,15 @@ the cursor on and off between each one. Best-effort: needs `xrdb` and
 `xsetroot` on an X11 `DISPLAY` — no X11, no those tools, Manoo still
 works, the cursor just stays whatever it already was.
 
+**Pass `x`/`y` to `type` so the cursor sits next to what's being typed.**
+`type` doesn't move the mouse on its own — if you clicked into a field
+far from where you're now typing, or the mouse was left somewhere else
+entirely, the glowing cursor won't be anywhere near the text, and it stops
+reading as "Manoo is writing this." Give `type` the coordinates of the
+field (usually the same ones you just clicked) and it moves the mouse
+there first. There's no text-highlighting effect — the visible feedback
+is the cursor's own position and glow, not the text itself.
+
 There is deliberately no separate HUD window anymore (an earlier version
 had one, first as a Firefox window — which a real user correctly pointed
 out an end user should never see, a generic browser window with an

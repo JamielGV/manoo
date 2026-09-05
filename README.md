@@ -202,6 +202,20 @@ waiting for the current action's own cleanup.
   entirely once the pulsing neon cursor could show "Manoo is working" on
   its own; a second indicator was redundant, per that same user's
   feedback, and was removed rather than reworked further.
+- **The target window minimizes (never closes) on the same idle timer,**
+  per explicit user feedback: leaving it merely covered behind the
+  now-maximized IDE still left it one alt-tab away and cluttering the
+  taskbar. `minimizeTargetWindow()` (`window-layout.mjs`) hides it via
+  `wmctrl -b add,hidden`, using the same sticky target-window id
+  `splitScreenWithIde()` already tracks. The next split un-minimizes it
+  automatically as part of normal placement — **verified live that this
+  needs `wmctrl -i -a <id>` (activate), not `-b remove,hidden`**: removing
+  the `_NET_WM_STATE_HIDDEN` property alone cleared the property but left
+  the window genuinely invisible and unresponsive to a geometry request;
+  activating (which both de-iconifies and raises/focuses) is what actually
+  restored it. `restoreOriginalLayout()` does the same on shutdown, so
+  Manoo stopping while the target is minimized doesn't leave it stuck
+  hidden.
 - **IDE un-splits (and its chat scrolls to the latest message) on the same
   idle timer** as the cursor — `maximizeIdeWindow()` fills the IDE back
   into the full work area, `focusIdeWindow()` raises and focuses it, then

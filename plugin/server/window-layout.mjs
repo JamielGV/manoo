@@ -114,6 +114,17 @@ async function getWorkArea() {
 async function placeWindow(id, { x, y, w, h }) {
   // Unmaximize first — a maximized window ignores -e geometry requests.
   await wmctrl(["-i", "-r", id, "-b", "remove,maximized_vert,maximized_horz"]);
+  // Un-minimize via activate (-a), not `-b remove,hidden` — confirmed live
+  // that removing the _NET_WM_STATE_HIDDEN property alone (whether chained
+  // onto the maximized-state removal above or issued as its own separate
+  // call) clears the property but doesn't actually de-iconify the window:
+  // a subsequent -e geometry request silently did nothing, and the window
+  // stayed invisible. `-a` (the same EWMH activate wmctrl uses for
+  // focusIdeWindow()) both de-iconifies AND raises/focuses it, and *that*
+  // is what actually made a minimized window visible and resizable again.
+  // A window minimized by minimizeTargetWindow() needs this before a
+  // geometry request will do anything.
+  await wmctrl(["-i", "-a", id]);
   // A window that was genuinely maximized (real WM state, e.g. by
   // maximizeIdeWindow() on a previous idle) doesn't always accept the
   // very next geometry request immediately — the un-maximize above needs
@@ -210,6 +221,13 @@ export function restoreOriginalLayout() {
   const restore = (id, geom) => {
     try {
       execFileSync("wmctrl", ["-i", "-r", id, "-b", "remove,maximized_vert,maximized_horz"], { stdio: "ignore" });
+      // Activate (-a), not `-b remove,hidden` — same finding as in
+      // placeWindow(): removing the property alone doesn't actually
+      // de-iconify the window. Needed here too — Manoo could stop
+      // operating while the target window is minimized (goIdle() via
+      // minimizeTargetWindow()), and shutdown should give the user back
+      // exactly what they had before, not a window stuck hidden.
+      execFileSync("wmctrl", ["-i", "-a", id], { stdio: "ignore" });
       execFileSync("wmctrl", ["-i", "-r", id, "-e", `0,${geom.x},${geom.y},${geom.w},${geom.h}`], { stdio: "ignore" });
     } catch {
       // best-effort — the window may already be gone
@@ -247,6 +265,23 @@ export async function maximizeIdeWindow() {
     // successfully every time.
     const wa = await getWorkArea();
     await placeWindow(originalIdeGeom.id, { x: wa.x, y: wa.y, w: wa.w, h: wa.h });
+  } catch {
+    // best-effort — the window may be gone
+  }
+}
+
+/** Minimizes the window Manoo was driving once it goes idle — the user
+ * asked for this explicitly: leaving it sitting open (even if covered by
+ * the now-maximized IDE) means it's still one alt-tab away and clutters
+ * the taskbar; closing it would be destructive and lose whatever state it
+ * had. Minimizing is reversible and gets it out of the way. Uses
+ * `lastTargetWindowId` (the sticky target-window tracking splitScreenWithIde
+ * already keeps) rather than re-discovering it, so this is cheap enough to
+ * call from the idle timer. No-op if no target has been identified yet. */
+export async function minimizeTargetWindow() {
+  if (!lastTargetWindowId) return;
+  try {
+    await wmctrl(["-i", "-r", lastTargetWindowId, "-b", "add,hidden"]);
   } catch {
     // best-effort — the window may be gone
   }
