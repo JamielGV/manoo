@@ -14,43 +14,53 @@ const PAGE = `<!doctype html>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   body {
-    margin: 0; padding: 10px; background: #05060a; color: #d8e8ff;
-    font: 13px/1.3 -apple-system, "Segoe UI", sans-serif;
+    margin: 0; padding: 12px; background: #05060a; color: #d8e8ff;
+    font: 14px/1.3 -apple-system, "Segoe UI", sans-serif;
     overflow: hidden; user-select: none;
+    border: 2px solid #1c2333;
+    border-radius: 10px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  body.active {
+    border-color: #4dd8ff;
+    box-shadow: 0 0 18px 2px #4dd8ff66, inset 0 0 18px 0 #4dd8ff22;
   }
   #hdr {
-    display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
-    font-weight: 600; letter-spacing: 0.03em;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    font-weight: 700; font-size: 15px; letter-spacing: 0.03em;
+    color: #baf1ff; text-shadow: 0 0 8px #4dd8ff99;
   }
   #dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #4dd8ff; box-shadow: 0 0 6px 2px #4dd8ff;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: #4dd8ff;
+    box-shadow: 0 0 8px 3px #4dd8ff, 0 0 18px 8px #4dd8ff66;
     animation: pulse 1.6s ease-in-out infinite;
   }
   @keyframes pulse {
-    0%, 100% { opacity: 0.5; transform: scale(0.85); }
-    50% { opacity: 1; transform: scale(1.15); }
+    0%, 100% { opacity: 0.6; transform: scale(0.85); }
+    50% { opacity: 1; transform: scale(1.25); }
   }
   #map {
     display: block; border-radius: 6px; background: #0b0e16;
     border: 1px solid #1c2333;
   }
   #cursor {
-    position: absolute; width: 10px; height: 10px; border-radius: 50%;
-    background: radial-gradient(circle, #baf1ff 0%, #4dd8ff 55%, transparent 75%);
-    box-shadow: 0 0 12px 4px #4dd8ffaa;
+    position: absolute; width: 16px; height: 16px; border-radius: 50%;
+    background: radial-gradient(circle, #ffffff 0%, #baf1ff 35%, #4dd8ff 65%, transparent 78%);
+    box-shadow: 0 0 16px 6px #4dd8ffcc, 0 0 32px 14px #4dd8ff77;
     transform: translate(-50%, -50%);
     transition: left 0.08s linear, top 0.08s linear;
     pointer-events: none;
   }
   #mapWrap { position: relative; }
   #ticker {
-    margin-top: 8px; min-height: 18px; font-size: 12px;
-    color: #4dd8ff; text-shadow: 0 0 6px #4dd8ff99;
+    margin-top: 10px; min-height: 24px; font-size: 17px; font-weight: 700;
+    color: #baf1ff; text-shadow: 0 0 8px #4dd8ffcc, 0 0 18px #4dd8ff88;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    opacity: 0; transition: opacity 0.15s ease;
+    opacity: 0; transform: scale(0.94);
+    transition: opacity 0.12s ease, transform 0.12s ease;
   }
-  #ticker.show { opacity: 1; }
+  #ticker.show { opacity: 1; transform: scale(1); }
 </style></head>
 <body>
   <div id="hdr"><span id="dot"></span>Manoo</div>
@@ -86,6 +96,13 @@ const PAGE = `<!doctype html>
     cursorEl.style.top = py + 'px';
   }
 
+  let activeTimer = null;
+  function flashActive() {
+    document.body.classList.add('active');
+    clearTimeout(activeTimer);
+    activeTimer = setTimeout(() => document.body.classList.remove('active'), 400);
+  }
+
   function flashTicker(text) {
     tickerEl.textContent = text;
     tickerEl.classList.add('show');
@@ -96,6 +113,7 @@ const PAGE = `<!doctype html>
   const es = new EventSource('/events');
   es.onmessage = (ev) => {
     const data = JSON.parse(ev.data);
+    flashActive();
     if (data.kind === 'mouse') {
       placeCursor(data.x, data.y, data.screenW, data.screenH);
     } else if (data.kind === 'type') {

@@ -31,6 +31,8 @@ machine.
     this process's own parent chain (not by title, which changes)
   - `server/overlay-server.mjs` — local HTTP+SSE server behind the neon HUD
     (see "Screen layout & HUD" below)
+  - `server/mouse-lock.mjs` — disables the user's physical mouse/touchpad
+    for the duration of a single action (see "Mouse lock" below)
   - `skills/computer-use/SKILL.md` — teaches Claude the
     screenshot→reason→act→verify loop and safety rules (no password fields,
     confirm before destructive actions)
@@ -79,11 +81,49 @@ chat message to Claude would block Claude's very next action almost every
 time (found live: typing "corrige" repeatedly blocked the next click,
 every time, because "corrige" starts with the letter it kept reporting).
 Only activity recent enough to plausibly mean "the human is touching
-something right now" counts.
+something right now" counts. **Escape is exempt from this staleness
+discard** — it's a deliberate stop gesture, not ambient noise, so it
+always counts, however long ago it was checked for.
+
+### Mouse lock during each action (implemented, verified)
+
+`server/mouse-lock.mjs` physically disables the user's real mouse/
+touchpad (via `xinput disable`, never the "Virtual core XTEST pointer"
+device nut-js itself uses) for the duration of a single action — a click,
+a drag, a scroll — then re-enables it in a `finally`. This is narrower in
+scope than the human-takeover check above: it only covers one action, not
+the whole task, and only the mouse, never the keyboard, so Escape (see
+below) always gets through. Verified: during the lock `xinput list` shows
+the devices as `[floating slave]`; after, they're back to
+`[slave pointer]`.
+
+Safety net against the process dying mid-lock: a 4-second watchdog timer
+force-re-enables regardless, and `exit`/`SIGINT`/`SIGTERM` handlers do the
+same synchronously. Verified: a simulated crash (hard `process.exit()`
+right after locking, skipping the `finally`) still left the mouse
+re-enabled immediately via the exit handler. The one real gap, inherent to
+the OS and not fixable from inside the process: `kill -9` (SIGKILL) can't
+be caught by anything running in the process being killed, so only the
+external watchdog timer would apply, and if the whole process is gone
+that timer is gone too — worst case the user's mouse stays disabled until
+they use the keyboard to fix it (`xinput enable <id>`) or unplug/replug a
+USB mouse. Not a full lockout since the keyboard is never touched.
+
+### Escape hard-stop (implemented, verified)
+
+A real Escape press (`input-monitor.mjs`) always counts as human takeover
+immediately, even mid-action — unlike other interference it isn't limited
+to "between actions" or subject to the 2-second staleness discard. It has
+its own narrow suppression window (`beginEscapeAction`, ~300ms) so Manoo's
+own synthetic Escape (sent via the `key` tool, e.g. to close a dialog)
+isn't mistaken for the user's stop signal. When triggered, it also
+force-unlocks the mouse immediately via `onEmergencyStop` rather than
+waiting for the current action's own cleanup.
 
 ## Screen layout & HUD (implemented, verified)
 
-- **Split screen with the IDE:** on startup, `window-layout.mjs` tiles the
+- **Split screen with the IDE:** on startup — and now before every single
+  action, not just once — `window-layout.mjs` tiles the
   Claude Code / IDE window and whatever app Manoo is driving into left/right
   halves of the work area (via `wmctrl`), so the user never loses sight of
   the conversation while Manoo acts. The `split_screen` tool re-runs this on

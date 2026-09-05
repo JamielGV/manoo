@@ -20,10 +20,15 @@ import { tmpdir } from "node:os";
 import { dirname } from "node:path";
 import { loadLicense, verifyLicenseString, LICENSE_FILE } from "./license.mjs";
 import { logAction, AUDIT_LOG_FILE } from "./audit.mjs";
-import { beginManooAction, consumeHumanInterference } from "./input-monitor.mjs";
+import { beginManooAction, beginEscapeAction, consumeHumanInterference, onEmergencyStop } from "./input-monitor.mjs";
 import { splitScreenWithIde, placeOverlayWindow } from "./window-layout.mjs";
 import { startOverlayServer } from "./overlay-server.mjs";
+import { withMouseLocked, emergencyUnlock } from "./mouse-lock.mjs";
 import { spawn } from "node:child_process";
+
+// A real Escape press always force-unlocks the mouse immediately, rather
+// than waiting for the current action's own `finally` to release it.
+onEmergencyStop(() => emergencyUnlock());
 
 // nut-js defaults are tuned for animated, human-like movement. For
 // programmatic control we want it fast and deterministic.
@@ -70,6 +75,12 @@ function isPro() {
 // rather than guessing what they wanted.
 
 function handoffMessage({ type, detail }) {
+  if (type === "escape") {
+    return textResult(
+      `🛑 Presionaste Escape — Manoo se detuvo de inmediato y no realizó la ` +
+      `acción pedida. Tienes el control. Pide que continúe cuando quieras.`
+    );
+  }
   return textResult(
     `🛑 Manoo detected real ${type} input (${detail}) that wasn't its own action — ` +
     `you touched an input device. Tienes el control ahora. Manoo stopped and did NOT ` +
@@ -93,6 +104,10 @@ function gated(name, handler) {
       }
       actionsUsed++;
     }
+    // Re-assert the split every action, not just once at startup — if the
+    // user (or the app itself) moved/maximized a window, this puts it
+    // back before Manoo acts again, so the IDE is always fully visible.
+    await splitScreenWithIde().catch(() => {});
     const result = await handler(args);
     if (isPro()) {
       await logAction({ tool: name, args }).catch(() => {});
@@ -271,7 +286,7 @@ server.registerTool(
   },
   gated("mouse_move", async ({ x, y }) => {
     beginManooAction(150);
-    await mouse.setPosition(new Point(x, y));
+    await withMouseLocked(() => mouse.setPosition(new Point(x, y)));
     pushOverlay({ kind: "mouse", x, y });
     return textResult(`Moved cursor to (${x}, ${y})`);
   })
@@ -287,11 +302,13 @@ function registerClickTool(name, button, label) {
     },
     gated(name, async ({ x, y }) => {
       beginManooAction(150);
-      if (x !== undefined && y !== undefined) {
-        await mouse.setPosition(new Point(x, y));
-      }
-      await mouse.click(button);
-      const p = await mouse.getPosition();
+      const p = await withMouseLocked(async () => {
+        if (x !== undefined && y !== undefined) {
+          await mouse.setPosition(new Point(x, y));
+        }
+        await mouse.click(button);
+        return mouse.getPosition();
+      });
       pushOverlay({ kind: "mouse", x: p.x, y: p.y });
       return textResult(`${label} at (${p.x}, ${p.y})`);
     })
@@ -311,11 +328,13 @@ server.registerTool(
   },
   gated("double_click", async ({ x, y }) => {
     beginManooAction(200);
-    if (x !== undefined && y !== undefined) {
-      await mouse.setPosition(new Point(x, y));
-    }
-    await mouse.doubleClick(Button.LEFT);
-    const p = await mouse.getPosition();
+    const p = await withMouseLocked(async () => {
+      if (x !== undefined && y !== undefined) {
+        await mouse.setPosition(new Point(x, y));
+      }
+      await mouse.doubleClick(Button.LEFT);
+      return mouse.getPosition();
+    });
     pushOverlay({ kind: "mouse", x: p.x, y: p.y });
     return textResult(`Double clicked at (${p.x}, ${p.y})`);
   })
@@ -336,10 +355,12 @@ server.registerTool(
   },
   gated("left_click_drag", async ({ start_x, start_y, end_x, end_y }) => {
     beginManooAction(300);
-    await mouse.setPosition(new Point(start_x, start_y));
-    await mouse.pressButton(Button.LEFT);
-    await mouse.setPosition(new Point(end_x, end_y));
-    await mouse.releaseButton(Button.LEFT);
+    await withMouseLocked(async () => {
+      await mouse.setPosition(new Point(start_x, start_y));
+      await mouse.pressButton(Button.LEFT);
+      await mouse.setPosition(new Point(end_x, end_y));
+      await mouse.releaseButton(Button.LEFT);
+    });
     pushOverlay({ kind: "mouse", x: end_x, y: end_y });
     return textResult(`Dragged from (${start_x}, ${start_y}) to (${end_x}, ${end_y})`);
   })
@@ -363,7 +384,7 @@ server.registerTool(
       left: mouse.scrollLeft,
       right: mouse.scrollRight,
     }[direction];
-    await fn.call(mouse, amount);
+    await withMouseLocked(() => fn.call(mouse, amount));
     pushOverlay({ kind: "scroll", text: `${direction} ${amount}` });
     return textResult(`Scrolled ${direction} by ${amount}`);
   })
@@ -396,6 +417,11 @@ server.registerTool(
   gated("key", async ({ combo }) => {
     beginManooAction(150);
     const keys = resolveKeys(combo);
+    if (keys.includes(Key.Escape)) {
+      // Manoo is about to send Escape itself — don't let the global input
+      // monitor mistake its own synthetic Escape for the user's hard-stop.
+      beginEscapeAction(300);
+    }
     await keyboard.pressKey(...keys);
     await keyboard.releaseKey(...keys);
     pushOverlay({ kind: "key", text: combo });

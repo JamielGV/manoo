@@ -25,8 +25,10 @@ If you open a new target app window mid-task (e.g. you launched it via a
 terminal command rather than clicking it into existence), call
 `split_screen` again afterward so that window gets tiled in too — the
 automatic split at startup only knew about windows that already existed
-then. It's also the fix if the layout ever drifts (a window got maximized,
-moved to another desktop, etc.).
+then. In practice you rarely need to: the split is now re-asserted before
+every single action tool call, not just once at startup, so the IDE stays
+fully visible even if something (the user, the app itself) moved or
+maximized a window in between.
 
 ## A neon HUD shows Manoo is working
 
@@ -59,6 +61,18 @@ This is intentionally system-wide, not scoped to the window Manoo is
 driving — it can trigger from activity in a completely unrelated
 window if the user is doing something else at the same time. That's a
 known trade-off (safe-by-default over precise), not a bug.
+
+**Escape is a dedicated hard-stop.** Pressing Escape always counts as the
+user taking control, even mid-action (e.g. partway through a long `type`
+call) — it isn't subject to the 2-second staleness window that ambient
+interference is. You'll see a message specifically about Escape; treat it
+exactly like any other human-takeover message: stop and wait.
+
+**The user's physical mouse/touchpad is briefly disabled during each
+action** (not between actions) so a stray touchpad brush can't land a
+click meant for Manoo onto whatever window happens to have focus for that
+instant. This does not weaken the takeover above — Escape still works
+instantly since it's the keyboard, which is never touched.
 
 ## The loop
 
