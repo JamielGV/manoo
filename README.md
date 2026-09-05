@@ -7,6 +7,12 @@ MCP server, so it can act directly on screen instead of only describing
 steps. Linux/X11 only for now. Everything runs locally — nothing leaves the
 machine.
 
+Developed and tested against **Antigravity** (the Electron/GTK-based IDE
+this session runs in) — the window-finding logic (`window-layout.mjs`
+walks process ancestry, not window titles) and the cursor theme switch
+(`cursor-theme.mjs`, see below) both explicitly account for how
+Antigravity behaves, not just a generic "any editor" assumption.
+
 ## Layout
 
 - `.claude-plugin/marketplace.json` — local marketplace listing so this repo
@@ -43,9 +49,14 @@ machine.
   - `generate-keypair.mjs` — run once, produced the keypair already in use
     (private key gitignored, never commit it)
   - `mint-license.mjs` — `node mint-license.mjs --email x@y.com --plan pro
-    --days 365` prints a license key to hand to a paying customer (manual
-    for now — wiring this to a real checkout via Lemon Squeezy/Paddle is
-    the next step before charging anyone for real)
+    --days 365` prints a license key to hand to a paying customer manually
+  - `checkout-api/` — a Vercel serverless function that automates the
+    above: receives Lemon Squeezy's `order_created` webhook, mints a
+    license the same way `mint-license.mjs` does, and emails it via
+    Resend. Code is ready; `checkout-api/README.md` walks through the
+    parts only a human can do (creating the Lemon Squeezy/Vercel/Resend
+    accounts, since those need real identity and bank details) — not
+    wired to a live account yet.
 
 ## Licensing model (implemented, verified end-to-end)
 
@@ -58,8 +69,12 @@ machine.
 - License keys are Ed25519-signed (`payload.signature`, both base64url).
   Verified offline — no server round-trip yet, no telemetry. Tampered or
   forged keys are rejected (tested).
-- **Not yet done:** actually selling a key (no checkout page/payment
-  processor hooked up), ToS/Privacy Policy, device/seat limits.
+- **Not yet done:** the checkout is scaffolded (`licensing/checkout-api/`)
+  but not connected to a live Lemon Squeezy/Vercel/Resend account yet —
+  see that folder's README for the setup steps. Also missing: device/seat
+  limits. ToS and Privacy Policy drafts already exist at the repo root
+  (`LEGAL_TERMINOS_DE_SERVICIO.md`, `LEGAL_AVISO_DE_PRIVACIDAD.md`,
+  Spanish) — not yet linked from the site.
 
 ## Human control handoff (implemented, verified)
 
@@ -178,29 +193,40 @@ waiting for the current action's own cleanup.
   fill from the site's `<svg class="hand-icon">`, scaled down, drawn at
   4x internal resolution and downsampled for crisp edges, with a 4-frame
   pulsing glow), installs the cursor image at `~/.icons/manoo-neon/
-  cursors/left_ptr`, and swaps it in live by writing `Xcursor.theme`
-  straight into the X server's RESOURCE_MANAGER property via `xrdb
-  -merge -` (a direct X11 `DISPLAY` connection, no D-Bus), then nudging
-  with `xsetroot -cursor_name left_ptr` so the change is picked up
-  immediately — deliberately **not** `xfconf-query`/D-Bus, and **not**
-  `xsetroot` alone either. Two other mechanisms were tried and ruled out
-  first, both process-scoped failures (never reproduced from a plain
-  interactive shell): xfconf-query `-s` issued from this MCP server
-  reported success and even read back correctly from a second
-  xfconf-query call in the *same* process, but was completely invisible
-  to every other process on the machine checked immediately after
-  (matching D-Bus socket device/inode, matching uid — root cause never
-  identified); `xsetroot` alone only ever sets the ROOT window's cursor,
-  which doesn't propagate to already-open GTK app windows (they cache
-  their own cursor and only pick it up via XSETTINGS, which xsetroot
-  never touches) — confirmed live when a user reported not seeing the
-  neon cursor even on the bare desktop. Mouse/keyboard/screenshots all go
-  over the same `DISPLAY` connection and work fine, so switching the
-  cursor via `xrdb` sidesteps whatever that xfconf isolation is rather
-  than fighting it, while still actually propagating to app windows the
-  way root-only `xsetroot` can't. Restores the user's original theme
-  (captured once via `xrdb -query`) the same way, via `xrdb -merge -` +
-  `xsetroot`.
+  cursors/left_ptr`, and swaps it in live through **two** independent
+  channels together, since real testing showed different apps only
+  listen to one or the other:
+  - `xrdb -merge -` writes `Xcursor.theme` straight into the X server's
+    RESOURCE_MANAGER property (direct X11 `DISPLAY`, no D-Bus), then
+    `xsetroot -cursor_name left_ptr` nudges the root cursor — this is
+    what Firefox and the bare desktop respect.
+  - `xfconf-query -c xsettings -p /Gtk/CursorThemeName -s ...` writes
+    XFCE's D-Bus-backed settings store — this is what GTK apps read,
+    **confirmed live: Antigravity, the Electron/GTK-based IDE this
+    plugin is meant to run inside.**
+
+  Found live, from a real user report ("I still see the neon cursor and
+  I'm in Claude/Antigravity"), that an *earlier* version of this file
+  used xfconf-query alone, got swapped to xrdb-only after finding
+  xfconf-query writes from this server's process weren't visible to
+  other processes' reads (see below) — but the swap never wrote the
+  user's original theme name back into xfconf, so that store was left
+  stuck on `manoo-neon` indefinitely. Every check since was against
+  Xcursor via `xrdb -query`, which correctly showed the real theme, so
+  the stuck xfconf value went unnoticed while Antigravity (already
+  running, reading xfconf) kept reflecting it — permanently neon,
+  regardless of any idle timer. Fixed by writing and restoring **both**
+  channels together on every `applyNeonCursor()`/`restoreCursorTheme()`
+  call, using the xrdb-sourced name as the single source of truth for
+  what to restore *both* to (deliberately not trusting xfconf's own
+  current value for that, since it can itself be the stuck one).
+  Re-tested the original xfconf isolation concern while building this
+  fix — a write from inside the real server process this time **was**
+  correctly visible to an external `xfconf-query` read — so whatever
+  that earlier isolation was, it isn't reproducing now; xfconf-query is
+  kept as a second channel alongside xrdb rather than reinstated as the
+  only one, since xrdb remains the one with a longer track record of
+  reliably working from this process.
   **This is the result of several rounds of real user feedback**, in
   order: a detached corner window with a mini-map and a proxy dot (wrong
   — "that's not what neon cursor glow means") → a plain glowing dot as
@@ -208,8 +234,9 @@ waiting for the current action's own cleanup.
   geometry + mesh fill matching the site icon → smaller and crisper →
   the glow pulsing → the glow fixed to be pure light, no black fringing
   → on only while processing, off when idle, rather than for the whole
-  session → switched off xfconf-query entirely once it turned out to be
-  the reason idle/processing toggling wasn't visibly taking effect.
+  session → switched off xfconf-query in favor of xrdb-only, which (per
+  the paragraph above) turned out to be an incomplete fix, not a full
+  replacement → both channels written and restored together.
 - **No separate HUD window.** An earlier version had one (first Firefox,
   then a native GTK window after a real user pointed out an end user
   should never see a browser window with an address bar) — removed
