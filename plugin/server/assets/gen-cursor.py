@@ -3,9 +3,11 @@
 same hand geometry AND blue mesh fill as the site's <svg class="hand-icon">
 in site/index.html (viewBox 0 0 100 130: palm + 4 fingers + rotated thumb,
 filled with a 9x9 mesh pattern, cyan stroke outline), scaled down for a
-cursor — then compiles them into an Xcursor file via xcursorgen. Run once
-(or whenever the look changes) — the output is committed, this script
-isn't run at runtime."""
+cursor, drawn at a higher internal resolution and downsampled for crisp
+edges, with the glow behind it pulsing across several animation frames —
+then compiles them into an Xcursor file via xcursorgen. Run once (or
+whenever the look changes) — the output is committed, this script isn't
+run at runtime."""
 import subprocess
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter
@@ -14,9 +16,15 @@ OUT_DIR = Path(__file__).parent
 
 # Same coordinate system as the site icon's viewBox (0 0 100 130), scaled
 # down to cursor size. Keep this in sync if the site icon's hand shape
-# ever changes.
-SCALE = 0.6
-W, H = round(100 * SCALE), round(130 * SCALE)
+# ever changes. Smaller than earlier iterations, per feedback that it
+# should read as a cursor, not a large icon.
+SCALE = 0.34
+# Draw everything at SS× this size, then downsample with LANCZOS at the
+# end — a direct draw at final size looked soft/undefined at this scale.
+SS = 4
+DS = SCALE * SS
+W, H = round(100 * DS), round(130 * DS)
+FINAL_W, FINAL_H = round(100 * SCALE), round(130 * SCALE)
 # Hotspot at the tip of the tallest (middle) finger — the natural
 # "pointing" spot on an open hand, same convention as a pointer cursor.
 HOT_X, HOT_Y = round(59 * SCALE), round(10 * SCALE)
@@ -27,7 +35,7 @@ STROKE = (95, 232, 255)
 
 
 def s(*vals):
-    return [round(v * SCALE) for v in vals]
+    return [round(v * DS) for v in vals]
 
 
 def hand_shapes(draw, fill, outline=None, width=1):
@@ -36,12 +44,12 @@ def hand_shapes(draw, fill, outline=None, width=1):
         kwargs["outline"] = outline
         kwargs["width"] = width
     # Palm.
-    draw.rounded_rectangle(s(25, 55, 75, 107), radius=round(20 * SCALE), **kwargs)
+    draw.rounded_rectangle(s(25, 55, 75, 107), radius=round(20 * DS), **kwargs)
     # Fingers (pinky to index), matching the site icon's four rects.
-    draw.rounded_rectangle(s(30, 25, 40, 60), radius=round(5 * SCALE), **kwargs)
-    draw.rounded_rectangle(s(42, 14, 52, 60), radius=round(5 * SCALE), **kwargs)
-    draw.rounded_rectangle(s(54, 10, 64, 60), radius=round(5 * SCALE), **kwargs)
-    draw.rounded_rectangle(s(66, 17, 76, 58), radius=round(5 * SCALE), **kwargs)
+    draw.rounded_rectangle(s(30, 25, 40, 60), radius=round(5 * DS), **kwargs)
+    draw.rounded_rectangle(s(42, 14, 52, 60), radius=round(5 * DS), **kwargs)
+    draw.rounded_rectangle(s(54, 10, 64, 60), radius=round(5 * DS), **kwargs)
+    draw.rounded_rectangle(s(66, 17, 76, 58), radius=round(5 * DS), **kwargs)
 
 
 def paste_thumb(base_rgba, fill, outline=None, width=1):
@@ -53,7 +61,7 @@ def paste_thumb(base_rgba, fill, outline=None, width=1):
     if outline:
         kwargs["outline"] = outline
         kwargs["width"] = width
-    d.rounded_rectangle([pad, pad, pad + tw, pad + th], radius=round(5.5 * SCALE), **kwargs)
+    d.rounded_rectangle([pad, pad, pad + tw, pad + th], radius=round(5.5 * DS), **kwargs)
     canvas = canvas.rotate(38, resample=Image.BICUBIC, expand=True)
     cx, cy = s(17.5, 68)
     base_rgba.alpha_composite(canvas, (cx - canvas.width // 2, cy - canvas.height // 2))
@@ -71,10 +79,10 @@ def make_mask():
 
 
 def make_mesh_tile():
-    cell = max(2, round(9 * SCALE))
+    cell = max(2, round(9 * DS))
     tile = Image.new("RGBA", (cell, cell), (*MESH_BG, 255))
     d = ImageDraw.Draw(tile)
-    lw = max(1, round(0.7 * SCALE))
+    lw = max(1, round(0.7 * DS))
     d.line([(0, 0), (cell, 0)], fill=(*MESH_LINE, 217), width=lw)
     d.line([(0, 0), (0, cell)], fill=(*MESH_LINE, 217), width=lw)
     return tile
@@ -90,45 +98,56 @@ def make_mesh_fill():
     return fill
 
 
+# Computed once — identical across frames, only the glow pulses.
+_MASK = make_mask()
+_MESH = make_mesh_fill()
+
+
 def make_frame(glow_blur, glow_alpha):
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 
-    # Glow: blurred solid silhouette underneath everything.
+    # Glow: blurred solid silhouette underneath everything — this is what
+    # pulses frame to frame, like a heartbeat behind the hand.
     glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(glow)
     hand_shapes(d, (*STROKE, glow_alpha))
     paste_thumb(glow, (*STROKE, glow_alpha))
-    glow = glow.filter(ImageFilter.GaussianBlur(glow_blur))
+    glow = glow.filter(ImageFilter.GaussianBlur(glow_blur * SS))
     img.alpha_composite(glow)
 
     # Mesh-filled hand, clipped to the hand silhouette.
-    mask = make_mask()
-    mesh = make_mesh_fill()
     filled = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    filled.paste(mesh, (0, 0), mask)
+    filled.paste(_MESH, (0, 0), _MASK)
     img.alpha_composite(filled)
 
     # Stroke outline on top, same as the SVG's stroke="#5fe8ff".
     outline_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(outline_layer)
-    lw = max(1, round(2 * SCALE))
+    lw = max(1, round(2 * DS))
     hand_shapes(d, None, outline=(*STROKE, 255), width=lw)
     paste_thumb(outline_layer, None, outline=(*STROKE, 255), width=lw)
     img.alpha_composite(outline_layer)
 
-    return img
+    return img.resize((FINAL_W, FINAL_H), Image.LANCZOS)
 
 
-frames = [
-    make_frame(1.6, 160),
-    make_frame(2.6, 210),
+# A pulsing neon glow: alternates dim -> bright -> dim rather than a
+# single static halo, per feedback that the shadow should flicker/pulse.
+PULSE = [
+    (2.0, 40),
+    (3.0, 130),
+    (4.0, 230),
+    (3.0, 130),
 ]
+FRAME_MS = 150
+
+frames = [make_frame(blur, alpha) for blur, alpha in PULSE]
 
 config_lines = []
 for i, frame in enumerate(frames):
     png_path = OUT_DIR / f"cursor-frame-{i}.png"
     frame.save(png_path)
-    config_lines.append(f"{H} {HOT_X} {HOT_Y} {png_path.name} 700")
+    config_lines.append(f"{FINAL_H} {HOT_X} {HOT_Y} {png_path.name} {FRAME_MS}")
 
 config_path = OUT_DIR / "cursor.conf"
 config_path.write_text("\n".join(config_lines) + "\n")
@@ -139,4 +158,4 @@ subprocess.run(
     cwd=OUT_DIR,
     check=True,
 )
-print("wrote", out_path, "size", (W, H), "hot", (HOT_X, HOT_Y))
+print("wrote", out_path, "size", (FINAL_W, FINAL_H), "hot", (HOT_X, HOT_Y))
