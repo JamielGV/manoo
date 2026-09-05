@@ -79,7 +79,7 @@ async function ensureActivated() {
 // "processing" stretch rather than flickering on and off between each
 // one, so this re-arms a single idle timer on every action instead of
 // reverting right after each individual one.
-const IDLE_MS = 15000;
+const IDLE_MS = 60000;
 let idleTimer = null;
 
 async function goIdle() {
