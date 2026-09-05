@@ -42,24 +42,33 @@ te sirve, Pro son $29 USD al año, sin límite.
 
 ## Sobre el creador (credibilidad — cursos/constancias, sin nombres de clientes)
 
+Fuentes: LinkedIn (2 certificados Santander Open Academy) + tu CV
+(`Currículum Vitae Jamiel Garcia Velazquez 2026.pdf`, en Descargas) —
+combinadas y filtradas a lo relevante para Manoo, sin nombres de clientes
+de Corporación Jamiel.
+
 **Versión corta (para el sitio o un post):**
-> Manoo lo construyó Jamiel García Velázquez, ingeniero con experiencia en
-> automatización industrial y gestión de proyectos, hoy Coordinador de
-> Ingeniería de Datos automatizando procesos con Python. Con certificación
-> en Python y en "Prompting responsable: maximiza la IA en tu negocio"
-> (Santander Open Academy, contenido de Microsoft | Founderz). Manoo nace
-> de la misma lógica: automatizar lo repetitivo, con criterio técnico real
-> detrás, no un experimento de fin de semana.
+> Manoo lo construyó Jamiel García Velázquez, Ingeniero Mecánico
+> Electricista (UNAM) con más de 15 años en automatización industrial,
+> control de procesos y Six Sigma. En los últimos años enfocó su
+> formación en IA: Inteligencia Artificial Generativa, Macro
+> Entrenamiento en IA, y certificaciones en Python y "Prompting
+> responsable" (Santander Open Academy / Microsoft | Founderz). Manoo es
+> la continuación natural de esa trayectoria: llevar la automatización
+> industrial al escritorio, con criterio técnico real detrás.
 
 **Versión para "Acerca de" más completa (si quieres una sección dedicada):**
-> Ingeniero con experiencia en automatización industrial y gestión de
-> proyectos, enfocado en innovación tecnológica y mejora continua.
-> Capacitado en programación de PLC, control de procesos, metodologías
-> Six Sigma e inteligencia artificial generativa. Certificaciones
-> recientes: **Python** (Santander Open Academy, ene. 2026) y **Prompting
-> responsable: maximiza la IA en tu negocio** (Santander Open Academy,
-> contenido desarrollado por Microsoft | Founderz, ago. 2026). Hoy
-> Coordinador de Ingeniería de Datos, automatizando procesos con Python.
+> Ingeniero Mecánico Electricista (UNAM), con experiencia en
+> automatización industrial y gestión de proyectos — PLCs, control de
+> procesos, Six Sigma. En los últimos dos años enfocó su capacitación en
+> inteligencia artificial: **Inteligencia Artificial Generativa** (abr.
+> 2025), **Macro Entrenamiento en IA** (jun. 2025), participación en el
+> **Congreso Internacional de Supercómputo** (sep. 2025), y
+> certificaciones en **Python** y **"Prompting responsable: maximiza la
+> IA en tu negocio"** (Santander Open Academy, contenido de Microsoft |
+> Founderz). Hoy coordina ingeniería de datos, automatizando procesos con
+> Python. Manoo nace de esa misma lógica: automatizar lo repetitivo, con
+> criterio técnico real detrás, no un experimento de fin de semana.
 
 Úsala para una sección "Quién está detrás de Manoo" en la página o para
 el pitch de LinkedIn — le da peso real a "esto no es un juguete, lo hizo
