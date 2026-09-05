@@ -10,7 +10,6 @@
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
 import { readFile } from "node:fs/promises";
-import { OVERLAY_WINDOW_TITLE } from "./overlay-server.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -27,7 +26,6 @@ let lastTargetWindowId = null;
 // the common case well enough.
 let originalIdeGeom = null;
 let originalTarget = null; // { id, x, y, w, h }
-let overlayWindowId = null;
 
 async function wmctrl(args) {
   const { stdout } = await execFileAsync("wmctrl", args);
@@ -93,10 +91,7 @@ async function findIdeWindow(windows) {
  * the last-mapped-window guess only when the previous target is gone. */
 function findTargetWindow(windows, ideWindow) {
   const candidates = windows.filter(
-    (w) =>
-      w.desktop >= 0 &&
-      (!ideWindow || w.id !== ideWindow.id) &&
-      !w.title.includes(OVERLAY_WINDOW_TITLE)
+    (w) => w.desktop >= 0 && (!ideWindow || w.id !== ideWindow.id)
   );
   if (lastTargetWindowId) {
     const stillThere = candidates.find((w) => w.id === lastTargetWindowId);
@@ -119,7 +114,22 @@ async function getWorkArea() {
 async function placeWindow(id, { x, y, w, h }) {
   // Unmaximize first — a maximized window ignores -e geometry requests.
   await wmctrl(["-i", "-r", id, "-b", "remove,maximized_vert,maximized_horz"]);
-  await wmctrl(["-i", "-r", id, "-e", `0,${x},${y},${w},${h}`]);
+  // A window that was genuinely maximized (real WM state, e.g. by
+  // maximizeIdeWindow() on a previous idle) doesn't always accept the
+  // very next geometry request immediately — the un-maximize above needs
+  // a moment to actually take effect first, or the resize is silently
+  // ignored (confirmed live: the un-maximize + resize landed fine for a
+  // window that had never been maximized, but did nothing for one that
+  // had). Verify and retry rather than assuming one attempt is enough.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await wmctrl(["-i", "-r", id, "-e", `0,${x},${y},${w},${h}`]);
+    const windows = await listWindows();
+    const placed = windows.find((w2) => w2.id === id);
+    if (placed && placed.x === x && placed.y === y && placed.w === w && placed.h === h) {
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 150));
+  }
 }
 
 /** Tile the IDE window and the most-recent other window into left/right
@@ -163,67 +173,11 @@ export async function splitScreenWithIde({ ideSide = "left" } = {}) {
   };
 }
 
-/** Pins the HUD overlay window (matched by its fixed title) into the
- * bottom-right corner, always-on-top and out of the taskbar/pager. The
- * overlay window is opened by index.mjs right before this is called, but
- * it may take a moment to map — retries a few times. */
-export async function placeOverlayWindow({
-  width = 240,
-  height = 110,
-  attempts = 10,
-  delayMs = 300,
-} = {}) {
-  for (let i = 0; i < attempts; i++) {
-    const windows = await listWindows();
-    const matches = windows.filter((w) => w.title.includes(OVERLAY_WINDOW_TITLE));
-    const overlay = matches[matches.length - 1]; // most recently opened, if several
-    if (overlay) {
-      overlayWindowId = overlay.id; // remembered so restoreOriginalLayout() can close it
-      const wa = await getWorkArea();
-      const geom = {
-        x: wa.x + wa.w - width,
-        y: wa.y + wa.h - height,
-        w: width,
-        h: height,
-      };
-      await wmctrl(["-i", "-r", overlay.id, "-b", "remove,maximized_vert,maximized_horz"]);
-      await wmctrl(["-i", "-r", overlay.id, "-e", `0,${geom.x},${geom.y},${geom.w},${geom.h}`]);
-
-      // The window manager doesn't always honor a geometry request
-      // exactly — Firefox enforces its own minimum chrome width/height
-      // (silently overriding a request smaller than that), and re-applying
-      // a corrected geometry can itself land a few pixels off again. Keep
-      // re-anchoring to the corner using whatever actually stuck until it
-      // settles, instead of assuming one correction pass is enough.
-      let want = geom;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const [placed] = (await listWindows()).filter((w) => w.id === overlay.id);
-        if (!placed) break;
-        if (placed.x === want.x && placed.y === want.y && placed.w === want.w && placed.h === want.h) {
-          break;
-        }
-        want = {
-          x: wa.x + wa.w - placed.w,
-          y: wa.y + wa.h - placed.h,
-          w: placed.w,
-          h: placed.h,
-        };
-        await wmctrl(["-i", "-r", overlay.id, "-e", `0,${want.x},${want.y},${want.w},${want.h}`]);
-      }
-
-      await wmctrl(["-i", "-r", overlay.id, "-b", "add,above,skip_taskbar,skip_pager"]);
-      return { ok: true };
-    }
-    await new Promise((r) => setTimeout(r, delayMs));
-  }
-  return { ok: false, reason: "overlay-window-not-found" };
-}
-
 /** Puts the IDE and target windows back where they were before Manoo's
- * first split, and closes the HUD overlay — "the screen goes back to how
- * it was" once Manoo stops operating. Synchronous (execFileSync) so it
- * can run from a process "exit" handler, and safe to call even if
- * activation never happened (nothing was captured, so this is a no-op). */
+ * first split — "the screen goes back to how it was" once Manoo stops
+ * operating. Synchronous (execFileSync) so it can run from a process
+ * "exit" handler, and safe to call even if activation never happened
+ * (nothing was captured, so this is a no-op). */
 export function restoreOriginalLayout() {
   const restore = (id, geom) => {
     try {
@@ -240,16 +194,44 @@ export function restoreOriginalLayout() {
   if (originalTarget) {
     restore(originalTarget.id, originalTarget);
   }
-  if (overlayWindowId) {
-    try {
-      execFileSync("wmctrl", ["-i", "-c", overlayWindowId], { stdio: "ignore" });
-    } catch {
-      // already closed, or wmctrl's -c couldn't reach it — nothing more to do
-    }
-  }
 }
 
 // Safe to self-register: Node calls every "exit" listener from every
 // module regardless of who's responsible for the process ending, unlike
 // SIGINT/SIGTERM (see the comment in mouse-lock.mjs).
 process.on("exit", restoreOriginalLayout);
+
+/** Gives the IDE window back the full screen once Manoo goes idle between
+ * tasks — the split is only useful while it's actually about to act.
+ * Reuses the id captured on first split rather than re-discovering the
+ * IDE window, so this is cheap enough to call from an idle timer. No-op
+ * if the layout was never touched yet. */
+export async function maximizeIdeWindow() {
+  if (!originalIdeGeom) return;
+  try {
+    // Explicit full-workarea geometry, not the WM's own "maximized" state
+    // flag (`-b add,maximized_vert,maximized_horz`) — found live that once
+    // this window had genuinely been put into that WM state, subsequent
+    // external resize requests (the next split) stopped landing reliably,
+    // even with unmaximize-then-retry. Filling the same coordinates
+    // explicitly gets the same visual result without ever setting that
+    // flag, which split screen's own placeWindow() already does
+    // successfully every time.
+    const wa = await getWorkArea();
+    await placeWindow(originalIdeGeom.id, { x: wa.x, y: wa.y, w: wa.w, h: wa.h });
+  } catch {
+    // best-effort — the window may be gone
+  }
+}
+
+/** Brings the IDE window to the front and gives it input focus — used
+ * when going idle so a follow-up "scroll to the latest message" gesture
+ * actually lands on the IDE rather than whatever had focus before. */
+export async function focusIdeWindow() {
+  if (!originalIdeGeom) return;
+  try {
+    await wmctrl(["-i", "-a", originalIdeGeom.id]);
+  } catch {
+    // best-effort — the window may be gone
+  }
+}

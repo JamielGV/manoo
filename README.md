@@ -132,7 +132,7 @@ isn't mistaken for the user's stop signal. When triggered, it also
 force-unlocks the mouse immediately via `onEmergencyStop` rather than
 waiting for the current action's own cleanup.
 
-## Screen layout & HUD (implemented, verified)
+## Screen layout & cursor (implemented, verified)
 
 - **Lazy activation:** none of this runs when the MCP server process
   starts. `index.mjs`'s `ensureActivated()` fires once, on the first
@@ -151,51 +151,97 @@ waiting for the current action's own cleanup.
   than re-guessing "the last other window" on every call — found live that
   the naive guess could mistake an unrelated window the user opened in
   parallel (a file manager) for the app being driven.
-- **Neon cursor (implemented, verified):** the real system pointer is
-  swapped for a neon-glow version while Manoo is active —
-  `cursor-theme.mjs` generates it once (`assets/gen-cursor.py`, Pillow +
-  `xcursorgen`, committed as `assets/left_ptr`), installs a
-  `~/.icons/manoo-neon` theme that `Inherits=` whatever the user's real
-  theme was (so only the pointer shape changes, not text-cursors/resize
-  handles/etc.), and live-switches to it via `xfconf-query -c xsettings -p
-  /Gtk/CursorThemeName -s manoo-neon` (XFCE-specific). Restored back to
-  the captured original theme name on shutdown, the same way as the
-  window layout and mouse lock. Real bug fixed during first testing: the
-  `-p` flag was missing from the xfconf-query calls, which fails loudly
-  enough (`No se ha especificado ninguna propiedad`) that it should have
-  been obvious immediately, but was silently swallowed by the function's
-  own best-effort try/catch until tested with the try/catch removed.
-  **This replaced an earlier version** that instead opened a separate
-  corner window with a mini-map and a proxy dot tracking the cursor
-  position — a real user correctly pointed out that isn't what "neon
-  cursor glow" should mean, so the HUD below no longer tracks the cursor
-  at all, only typing.
-- **Neon HUD overlay:** a small always-on-top window pinned to the
-  bottom-right corner (opened in Firefox, positioned via `wmctrl`) shows a
-  flashing ticker for the last thing typed or key pressed. Pushed live
-  from the MCP server over Server-Sent Events (`overlay-server.mjs`) —
-  every scroll/type/key tool feeds it, no extra calls needed. Excluded
-  from `split_screen`'s target-window detection so it's never mistaken
-  for the app being driven.
+- **Neon cursor, only while processing (implemented, mechanism verified;
+  end-to-end visual not independently verifiable by Claude):** the real
+  system pointer is swapped for a neon-glow hand — not a separate window,
+  the actual cursor — for as long as Manoo is actively working, reverting
+  to the user's normal cursor `IDLE_MS` (15000ms) after it goes idle
+  rather than staying neon for the whole session. `index.mjs`'s
+  `markProcessing()` re-applies it and re-arms the idle timer on every
+  action, so a fast burst of actions reads as one continuous stretch
+  instead of flickering between each one. `cursor-theme.mjs` generates
+  the cursor once (`assets/gen-cursor.py`, Pillow + `xcursorgen`,
+  committed as `assets/left_ptr` — the exact hand geometry and blue mesh
+  fill from the site's `<svg class="hand-icon">`, scaled down, drawn at
+  4x internal resolution and downsampled for crisp edges, with a 4-frame
+  pulsing glow), installs the cursor image at `~/.icons/manoo-neon/
+  cursors/left_ptr`, and swaps it in live via `xsetroot -cursor_name
+  left_ptr` with `XCURSOR_THEME=manoo-neon` set for just that call — a
+  direct X11 `DISPLAY` call, deliberately **not** `xfconf-query`/D-Bus,
+  after finding live that an xfconf-query `-s` issued from this MCP
+  server reported success and even read back correctly from a second
+  xfconf-query call in the *same* process, but was completely invisible
+  to every other process on the machine checked immediately after
+  (matching D-Bus socket device/inode, matching uid — so not an obvious
+  sandbox/namespace mismatch, just consistently ineffective from outside
+  that one process). Mouse/keyboard/screenshots all go over that same
+  `DISPLAY` connection and work fine, so switching the cursor the same
+  way sidesteps whatever that isolation is rather than fighting it.
+  Restores the user's original theme (captured once via `xrdb -query`)
+  the same way — also via `xsetroot`, also bypassing D-Bus.
+  **This is the result of several rounds of real user feedback**, in
+  order: a detached corner window with a mini-map and a proxy dot (wrong
+  — "that's not what neon cursor glow means") → a plain glowing dot as
+  the real cursor → a simplified pointing-hand blob → the actual hand
+  geometry + mesh fill matching the site icon → smaller and crisper →
+  the glow pulsing → the glow fixed to be pure light, no black fringing
+  → on only while processing, off when idle, rather than for the whole
+  session → switched off xfconf-query entirely once it turned out to be
+  the reason idle/processing toggling wasn't visibly taking effect.
+- **No separate HUD window.** An earlier version had one (first Firefox,
+  then a native GTK window after a real user pointed out an end user
+  should never see a browser window with an address bar) — removed
+  entirely once the pulsing neon cursor could show "Manoo is working" on
+  its own; a second indicator was redundant, per that same user's
+  feedback, and was removed rather than reworked further.
+- **IDE un-splits (and its chat scrolls to the latest message) on the same
+  idle timer** as the cursor — `maximizeIdeWindow()` fills the IDE back
+  into the full work area, `focusIdeWindow()` raises and focuses it, then
+  a plain `mouse.scrollDown` nudges its chat to the bottom, all from
+  `goIdle()` in `index.mjs`. Deliberately uses explicit full-workarea
+  geometry (the same `placeWindow()` the split itself uses), not the
+  window manager's own "maximized" state flag (`-b add,maximized_vert,
+  maximized_horz`) — found live that once the IDE had genuinely been put
+  into that WM state, the *next* split's resize of it stopped landing
+  reliably (confirmed via `wmctrl -lG` immediately after, not just a
+  slow-propagation guess), even with unmaximize-then-retry; filling the
+  same coordinates explicitly avoids ever setting that flag.
+  **Known unresolved issue:** even with that fix, a resize of the IDE
+  window issued by this MCP server doesn't always land, in a way a
+  same-shaped resize of the *target* window (or of the IDE window done
+  manually, or done by a throwaway Node script) doesn't share — every
+  variant tried (adding a settle delay, verifying + retrying up to 4
+  times, avoiding the maximized state flag) narrowed the failure mode
+  without fully eliminating it. Current best guess, not confirmed: xfwm4
+  may treat an external resize of the *currently focused/active* window
+  differently than an unfocused one, and the IDE is very often the
+  focused window at the exact moment an action fires (a user actively
+  driving Claude Code has, by definition, just interacted with the IDE to
+  send that message) — but this couldn't be cleanly isolated from inside
+  this same interactive loop, since sending the very message that
+  triggers a tool call also refocuses the IDE. If this keeps happening:
+  `split_screen` re-run a moment later, or a manual resize, both still
+  work.
 - **Restore on shutdown:** the first time the layout is actually touched,
   `window-layout.mjs` captures the IDE and target windows' original
-  position/size. When Manoo stops operating — session closed, process
-  killed, `SIGINT`/`SIGTERM` — everything is put back and the HUD window
-  is closed. Geometry only, not the WM's internal "maximized" flag (wmctrl
-  doesn't expose that cheaply), but visually restores the common case
-  well. A single centralized `shutdown()` in `index.mjs` owns SIGINT/
-  SIGTERM for the whole process and calls both this and the mouse-lock
-  cleanup — deliberately not left to each module to register its own
-  signal handler, since the first one to call `process.exit()` would
-  silently stop any other same-signal listener registered after it from
-  ever running (Node quirk, not a wmctrl one). Each module's own `exit`
+  position/size, and `cursor-theme.mjs` captures the original cursor
+  theme name. When Manoo stops operating — session closed, process
+  killed, `SIGINT`/`SIGTERM` — everything is put back. Window geometry
+  only, not the WM's internal "maximized" flag (wmctrl doesn't expose
+  that cheaply), but visually restores the common case well. A single
+  centralized `shutdown()` in `index.mjs` owns SIGINT/SIGTERM for the
+  whole process and calls both this and the mouse-lock cleanup —
+  deliberately not left to each module to register its own signal
+  handler, since the first one to call `process.exit()` would silently
+  stop any other same-signal listener registered after it from ever
+  running (Node quirk, not a wmctrl one). Each module's own `exit`
   listener is unaffected by that and still fires independently, since Node
   always runs every `exit` listener regardless of who ends the process.
   Same `kill -9` (SIGKILL) gap as the mouse lock, and for the same
   reason — nothing running inside the process being killed can react to
-  it. Worst case the windows are left wherever they were; re-running
-  `split_screen` or just resizing them by hand fixes it, same as any
-  normal window.
+  it. Worst case the windows/cursor are left wherever they were;
+  re-running `split_screen`, resizing windows by hand, or restarting the
+  session fixes it.
 - Also worth knowing: the plugin's installed *code* updates on
   `claude plugin install`, but an MCP server process already running
   keeps running the version it started with — reinstalling doesn't
@@ -204,9 +250,9 @@ waiting for the current action's own cleanup.
   ended (`kill` its PID, found via `ps aux | grep index.mjs`) for the next
   tool call to spawn a fresh one with the new code; otherwise the fixes
   above don't apply until the whole Claude Code session restarts.
-- Both split-screen and the HUD are best-effort: no X11 display, no
-  `wmctrl`, or no Firefox just means Manoo runs without them — never a
-  hard failure.
+- Split-screen and the cursor swap are both best-effort: no X11 display,
+  no `wmctrl`, no `xsetroot` — Manoo still works, just without that
+  particular touch.
 
 ## Test / iterate locally
 

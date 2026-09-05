@@ -42,28 +42,37 @@ driving" rather than re-guessing every time, so an unrelated window the
 user opens on their own in parallel (a file manager, another browser tab)
 doesn't get mistaken for the target and pulled into the split.
 
-When Manoo stops operating (the server process ends — session closed,
-plugin reloaded, etc.) both windows are put back to their original
-position and size, and the HUD closes — the screen returns to how it was
-before Manoo touched it.
+The split itself is also temporary within a session: after ~15 seconds of
+no further action tool calls, the IDE fills back to the full screen, gets
+focus, and its chat scrolls to the latest message — then splits again the
+next time you act. If a resize doesn't seem to take (rare, but seen live
+— the IDE window in particular can be stubborn about accepting an
+external resize while it's the focused window), `split_screen` re-run a
+moment later usually clears it.
 
-## The real cursor glows neon while Manoo is active
+When Manoo stops operating entirely (the server process ends — session
+closed, plugin reloaded, etc.) both windows are put back to their
+original position and size — the screen returns to how it was before
+Manoo touched it.
 
-Once activated, the actual system pointer is swapped for a neon-glow
-version (`cursor-theme.mjs`) — not a separate window, the real cursor
-itself. You never call anything for this. It reverts to the user's normal
-cursor when Manoo stops operating. Best-effort: XFCE only for now: on
-another desktop environment, or if the cursor theme can't be switched,
-Manoo still works, the cursor just stays whatever it already was.
+## The real cursor glows neon only while actually processing
 
-## A neon HUD shows Manoo is working
+The actual system pointer — not a separate window, the real cursor itself
+— swaps to a neon-glow hand (matching Manoo's own icon) for as long as
+Manoo is actively working, and reverts to the user's normal cursor about
+15 seconds after it goes quiet. You never call anything for this; it's
+tied to every action tool automatically. A burst of several actions in a
+row reads as one continuous "processing" stretch rather than flickering
+the cursor on and off between each one. Best-effort: needs `xsetroot` and
+an X11 `DISPLAY` — no X11, no `xsetroot`, Manoo still works, the cursor
+just stays whatever it already was.
 
-Once activated, a small always-on-top window pinned to the bottom-right
-corner (titled "Manoo · overlay") shows a flashing ticker with whatever
-was just typed or which key was pressed. It updates itself — you never
-call anything for this; every scroll/type/key tool already pushes to it.
-Best-effort: if there's no X11 display or Firefox isn't available, Manoo
-still works, it just runs without the HUD.
+There is deliberately no separate HUD window anymore (an earlier version
+had one, first as a Firefox window — which a real user correctly pointed
+out an end user should never see, a generic browser window with an
+address bar — then as a native GTK window). Once the cursor itself could
+show "Manoo is working," a second indicator was redundant, per that same
+user's feedback, and was removed rather than reworked.
 
 Free tier caps action tools (everything except `screenshot`,
 `cursor_position`, and the license tools) at 25 per session. If a tool

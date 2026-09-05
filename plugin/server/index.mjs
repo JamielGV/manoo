@@ -21,11 +21,9 @@ import { dirname } from "node:path";
 import { loadLicense, verifyLicenseString, LICENSE_FILE } from "./license.mjs";
 import { logAction, AUDIT_LOG_FILE } from "./audit.mjs";
 import { beginManooAction, beginEscapeAction, consumeHumanInterference, onEmergencyStop } from "./input-monitor.mjs";
-import { splitScreenWithIde, placeOverlayWindow, restoreOriginalLayout } from "./window-layout.mjs";
-import { startOverlayServer } from "./overlay-server.mjs";
+import { splitScreenWithIde, maximizeIdeWindow, focusIdeWindow, restoreOriginalLayout } from "./window-layout.mjs";
 import { withMouseLocked, emergencyUnlock } from "./mouse-lock.mjs";
 import { applyNeonCursor, restoreCursorTheme } from "./cursor-theme.mjs";
-import { spawn } from "node:child_process";
 
 // A real Escape press always force-unlocks the mouse immediately, rather
 // than waiting for the current action's own `finally` to release it.
@@ -50,39 +48,65 @@ process.on("SIGTERM", shutdown);
 mouse.config.mouseSpeed = 3000;
 
 // ---- Activation, on the user's first order — not at server startup ------
-// Manoo shouldn't take over the screen (split it, pop up the HUD) the
+// Manoo shouldn't take over the screen (split it, change the cursor) the
 // moment the IDE happens to start the plugin's MCP server — only once the
 // user has actually asked Claude to do something with it, which is
 // exactly when the first Manoo tool call happens. Everything below is
 // deferred into this lazy, once-only init instead of running at the top
 // of the file.
-let pushOverlay = () => {};
 let activated = false;
 
 async function ensureActivated() {
   if (activated) return;
   activated = true;
-  // The real system cursor becomes a neon glow — see cursor-theme.mjs.
-  // Best-effort: not XFCE, no writable ~/.icons — Manoo still works, the
-  // cursor just stays whatever it already was.
-  await applyNeonCursor().catch(() => {});
-  // A small always-on-top window with a ticker for what's being typed, so
-  // the user can tell Manoo is working. Best-effort: no X11 display, no
-  // wmctrl, no Firefox — Manoo still works, just quiet.
+  // There used to also be a small corner HUD window here (first Firefox,
+  // then a native GTK window after a real user pointed out an end user
+  // should never see a browser window with an address bar) — removed
+  // entirely once the pulsing neon cursor shipped: showing "Manoo is
+  // working" is now the cursor's job, and a second indicator was
+  // redundant per the same user's feedback. Nothing else to do here —
+  // the split and the cursor both wait for the first real action instead
+  // of firing on activation (see markProcessing() below).
+}
+
+// ---- Split screen + neon cursor, only while actually processing --------
+// Both only show up while Manoo is actively working — split screen so the
+// IDE stays visible while it acts, neon cursor so it's obvious it's Manoo
+// moving the mouse and not the user — and both revert once it goes idle
+// (IDE back to fullscreen, cursor back to normal), rather than staying on
+// for the whole session. A burst of several actions in quick succession
+// (screenshot, click, screenshot, click...) should read as one continuous
+// "processing" stretch rather than flickering on and off between each
+// one, so this re-arms a single idle timer on every action instead of
+// reverting right after each individual one.
+const IDLE_MS = 15000;
+let idleTimer = null;
+
+async function goIdle() {
+  restoreCursorTheme();
+  await maximizeIdeWindow().catch(() => {});
+  // Bring the IDE forward and scroll its chat to the latest message —
+  // otherwise the user gets the IDE back full-screen but possibly still
+  // scrolled to wherever it was mid-task, not what Claude just said.
+  await focusIdeWindow().catch(() => {});
+  beginManooAction(400);
   try {
-    const overlay = await startOverlayServer();
-    const overlayWindow = spawn(
-      "firefox",
-      ["--new-window", overlay.url],
-      { detached: true, stdio: "ignore" }
-    );
-    overlayWindow.unref();
-    await placeOverlayWindow();
-    pushOverlay = (event) => overlay.push(event);
+    await mouse.scrollDown(30);
   } catch {
-    // Best-effort HUD — see comment above.
+    // best-effort — no display, no mouse control available, etc.
   }
-  await splitScreenWithIde().catch(() => {});
+}
+
+/** Awaited by `gated()` before the actual handler runs — the split must
+ * be settled before a click fires, or it could land on the wrong window
+ * mid-transition. The cursor swap doesn't need the same guarantee, but is
+ * awaited too rather than fired-and-forgotten, so a slow xsetroot call
+ * can't race a fast handler. */
+async function markProcessing() {
+  await Promise.all([applyNeonCursor().catch(() => {}), splitScreenWithIde().catch(() => {})]);
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(goIdle, IDLE_MS);
+  idleTimer.unref?.();
 }
 
 // ---- Licensing / free-tier quota -------------------------------------
@@ -121,6 +145,7 @@ function handoffMessage({ type, detail }) {
 function gated(name, handler) {
   return async (args) => {
     await ensureActivated();
+    await markProcessing();
     const interference = consumeHumanInterference();
     if (interference) {
       return handoffMessage(interference);
@@ -134,10 +159,6 @@ function gated(name, handler) {
       }
       actionsUsed++;
     }
-    // Re-assert the split every action, not just once at startup — if the
-    // user (or the app itself) moved/maximized a window, this puts it
-    // back before Manoo acts again, so the IDE is always fully visible.
-    await splitScreenWithIde().catch(() => {});
     const result = await handler(args);
     if (isPro()) {
       await logAction({ tool: name, args }).catch(() => {});
@@ -416,7 +437,6 @@ server.registerTool(
       right: mouse.scrollRight,
     }[direction];
     await withMouseLocked(() => fn.call(mouse, amount));
-    pushOverlay({ kind: "scroll", text: `${direction} ${amount}` });
     return textResult(`Scrolled ${direction} by ${amount}`);
   })
 );
@@ -432,7 +452,6 @@ server.registerTool(
   gated("type", async ({ text }) => {
     beginManooAction(Math.max(200, text.length * 15));
     await keyboard.type(text);
-    pushOverlay({ kind: "type", text: text.length > 40 ? text.slice(0, 40) + "…" : text });
     return textResult(`Typed ${text.length} characters`);
   })
 );
@@ -455,7 +474,6 @@ server.registerTool(
     }
     await keyboard.pressKey(...keys);
     await keyboard.releaseKey(...keys);
-    pushOverlay({ kind: "key", text: combo });
     return textResult(`Pressed ${combo}`);
   })
 );

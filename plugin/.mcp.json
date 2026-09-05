@@ -6,7 +6,8 @@
       "args": ["${CLAUDE_PLUGIN_ROOT}/server/index.mjs"],
       "env": {
         "DISPLAY": "${DISPLAY}",
-        "XAUTHORITY": "${XAUTHORITY}"
+        "XAUTHORITY": "${XAUTHORITY}",
+        "XDG_RUNTIME_DIR": "${XDG_RUNTIME_DIR}"
       }
     }
   }
