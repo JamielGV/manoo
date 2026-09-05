@@ -40,30 +40,31 @@ te sirve, Pro son $29 USD al año, sin límite.
 - Equipos pequeños sin presupuesto para herramientas de RPA empresariales
   caras — Manoo es la versión ligera y gratuita para empezar.
 
-## Sobre el creador (credibilidad — tomado de tu LinkedIn con tu autorización)
+## Sobre el creador (credibilidad — cursos/constancias, sin nombres de clientes)
 
 **Versión corta (para el sitio o un post):**
 > Manoo lo construyó Jamiel García Velázquez, ingeniero con experiencia en
-> automatización industrial y gestión de proyectos. Antes de Manoo, lideró
-> proyectos de modernización y mantenimiento industrial para clientes como
-> BBVA, WEG, Honda y Nissan; hoy coordina ingeniería de datos y
-> automatización de procesos. Manoo nace de la misma lógica: automatizar
-> lo repetitivo, con criterio técnico real detrás, no un experimento de
-> fin de semana.
+> automatización industrial y gestión de proyectos, hoy Coordinador de
+> Ingeniería de Datos automatizando procesos con Python. Con certificación
+> en Python y en "Prompting responsable: maximiza la IA en tu negocio"
+> (Santander Open Academy, contenido de Microsoft | Founderz). Manoo nace
+> de la misma lógica: automatizar lo repetitivo, con criterio técnico real
+> detrás, no un experimento de fin de semana.
 
 **Versión para "Acerca de" más completa (si quieres una sección dedicada):**
 > Ingeniero con experiencia en automatización industrial y gestión de
 > proyectos, enfocado en innovación tecnológica y mejora continua.
 > Capacitado en programación de PLC, control de procesos, metodologías
-> Six Sigma e inteligencia artificial generativa. 9+ años liderando
-> modernización y mantenimiento industrial de forma independiente
-> (Corporación Jamiel) para clientes del sector manufacturero — BBVA, WEG,
-> Honda, Nissan, B&D — y actualmente Coordinador de Ingeniería de Datos,
-> automatizando procesos con Python.
+> Six Sigma e inteligencia artificial generativa. Certificaciones
+> recientes: **Python** (Santander Open Academy, ene. 2026) y **Prompting
+> responsable: maximiza la IA en tu negocio** (Santander Open Academy,
+> contenido desarrollado por Microsoft | Founderz, ago. 2026). Hoy
+> Coordinador de Ingeniería de Datos, automatizando procesos con Python.
 
 Úsala para una sección "Quién está detrás de Manoo" en la página o para
 el pitch de LinkedIn — le da peso real a "esto no es un juguete, lo hizo
-alguien que automatiza en serio".
+alguien que automatiza en serio", sin mencionar clientes de Corporación
+Jamiel.
 
 ## Dónde usar cada versión
 
