@@ -1,7 +1,0 @@
-{
-  "name": "manoo-checkout-api",
-  "version": "1.0.0",
-  "private": true,
-  "type": "module",
-  "description": "Lemon Squeezy webhook -> mints + emails a Manoo Pro license key. Deployed as a Vercel serverless function. See README.md for setup."
-}

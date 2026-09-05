@@ -43,26 +43,31 @@ cada venta (y cada renovación anual) se procesa sola.
    npx wrangler secret put RESEND_API_KEY
    npx wrangler secret put MANOO_PRIVATE_KEY_PEM   # pega el CONTENIDO de licensing/private-key.pem
    npx wrangler secret put SELLER_NOTIFY_EMAIL     # tu correo, para que te avisen de cada venta
-   npx wrangler secret put EXPECTED_AMOUNT_CENTS   # el precio en centavos, ej: 2900 = $29.00
    ```
+   (Los dos precios — $49/año y $6/mes — ya están fijos en
+   `worker/src/index.mjs` (`LICENSE_DAYS_BY_AMOUNT`), no como secreto —
+   edita ese archivo si el precio cambia.)
 4. Despliega:
    ```bash
    npx wrangler deploy
    ```
    Esto te da una URL tipo `https://manoo-payments.TU-SUBDOMINIO.workers.dev`.
 
-## 4. Crear el producto y el link de cobro
+## 4. Crear los productos y los links de cobro (dos: anual y mensual)
 
 ```bash
 cd ~/manoo/automation
-STRIPE_SECRET_KEY=sk_live_xxx node create-payment-link.mjs --price 2900 --name "Manoo Pro"
+STRIPE_SECRET_KEY=sk_live_xxx node create-payment-link.mjs --price 4900 --interval year --name "Manoo Pro (Annual)"
+STRIPE_SECRET_KEY=sk_live_xxx node create-payment-link.mjs --price 600 --interval month --name "Manoo Pro (Monthly)"
 ```
 
-(Precio en centavos: 2900 = $29.00 USD/año. O créalo a mano en el Dashboard
-de Stripe si prefieres clicks en vez de terminal.)
+(Precio en centavos: 4900 = $49.00 USD/año, 600 = $6.00 USD/mes. O
+créalos a mano en el Dashboard de Stripe si prefieres clicks en vez de
+terminal.)
 
-Copia la URL que imprime y reemplaza el `mailto:` del botón "Get Pro" en
-`site/index.html` por esa URL.
+Copia las dos URLs que imprime y reemplaza los `mailto:` del toggle
+Anual/Mensual en `site/index.html` (busca `BILLING.year` y
+`BILLING.month`) por esas URLs.
 
 ## 5. Conectar el webhook
 

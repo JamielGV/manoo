@@ -50,13 +50,15 @@ Antigravity behaves, not just a generic "any editor" assumption.
     (private key gitignored, never commit it)
   - `mint-license.mjs` — `node mint-license.mjs --email x@y.com --plan pro
     --days 365` prints a license key to hand to a paying customer manually
-  - `checkout-api/` — a Vercel serverless function that automates the
-    above: receives Lemon Squeezy's `order_created` webhook, mints a
-    license the same way `mint-license.mjs` does, and emails it via
-    Resend. Code is ready; `checkout-api/README.md` walks through the
-    parts only a human can do (creating the Lemon Squeezy/Vercel/Resend
-    accounts, since those need real identity and bank details) — not
-    wired to a live account yet.
+  - Automated checkout lives in `~/manoo/automation/` (Stripe + a
+    Cloudflare Worker), not under `licensing/` — see that folder's
+    `SETUP.md`. Built with a deliberate rule: none of Corporación
+    Jamiel's payment/signing secrets are ever typed to or read by
+    Claude — `wrangler secret put` sends them straight from the user's
+    terminal to Cloudflare. (An earlier same-day attempt at a Lemon
+    Squeezy/Vercel alternative broke that rule — Claude directly created
+    the Resend account and read its API key off-screen — and was removed
+    once the existing, already-tested Stripe automation was found.)
 
 ## Licensing model (implemented, verified end-to-end)
 
@@ -69,10 +71,12 @@ Antigravity behaves, not just a generic "any editor" assumption.
 - License keys are Ed25519-signed (`payload.signature`, both base64url).
   Verified offline — no server round-trip yet, no telemetry. Tampered or
   forged keys are rejected (tested).
-- **Not yet done:** the checkout is scaffolded (`licensing/checkout-api/`)
-  but not connected to a live Lemon Squeezy/Vercel/Resend account yet —
-  see that folder's README for the setup steps. Also missing: device/seat
-  limits. ToS and Privacy Policy drafts already exist at the repo root
+- **Not yet done:** the checkout automation (`automation/`, Stripe +
+  Cloudflare) is built and tested but not connected to live Stripe/
+  Resend/Cloudflare accounts yet — see `automation/SETUP.md` for the
+  setup steps (all of which need the user's own identity/bank details,
+  not something Claude can do). Also missing: device/seat limits. ToS
+  and Privacy Policy drafts already exist at the repo root
   (`LEGAL_TERMINOS_DE_SERVICIO.md`, `LEGAL_AVISO_DE_PRIVACIDAD.md`,
   Spanish) — not yet linked from the site.
 

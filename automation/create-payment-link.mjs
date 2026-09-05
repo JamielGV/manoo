@@ -1,12 +1,15 @@
-// Run once (or whenever you change the price) to create the recurring
-// Product/Price and a reusable Payment Link for Manoo Pro on Stripe.
-// Prints the URL to put in site/index.html's "Get Pro" button.
+// Run once per plan (or whenever you change a price) to create the
+// recurring Product/Price and a reusable Payment Link for Manoo Pro on
+// Stripe. Prints the URL to put in site/index.html's billing toggle —
+// run it twice, once per plan, since Manoo Pro sells as two separate
+// prices (annual $49, monthly $6).
 //
 // Easier alternative: Stripe Dashboard → Product catalog → Add product →
 // Create payment link. This script exists for reproducibility/scripting.
 //
 // Usage:
-//   STRIPE_SECRET_KEY=sk_live_xxx node create-payment-link.mjs --price 2900 --name "Manoo Pro"
+//   STRIPE_SECRET_KEY=sk_live_xxx node create-payment-link.mjs --price 4900 --interval year --name "Manoo Pro (Annual)"
+//   STRIPE_SECRET_KEY=sk_live_xxx node create-payment-link.mjs --price 600 --interval month --name "Manoo Pro (Monthly)"
 
 function parseArgs(argv) {
   const out = {};
@@ -41,8 +44,13 @@ if (!secretKey) {
   process.exit(1);
 }
 if (!args.price) {
-  console.error('Usage: STRIPE_SECRET_KEY=sk_live_xxx node create-payment-link.mjs --price 2900 --name "Manoo Pro"');
-  console.error("(--price is in cents, e.g. 2900 = $29.00)");
+  console.error('Usage: STRIPE_SECRET_KEY=sk_live_xxx node create-payment-link.mjs --price 4900 --interval year --name "Manoo Pro (Annual)"');
+  console.error("(--price is in cents, e.g. 4900 = $49.00; --interval is 'year' or 'month', default 'year')");
+  process.exit(1);
+}
+const interval = args.interval || "year";
+if (interval !== "year" && interval !== "month") {
+  console.error(`--interval must be "year" or "month", got "${interval}"`);
   process.exit(1);
 }
 
@@ -53,7 +61,7 @@ const price = await stripe(secretKey, "prices", {
   product: product.id,
   unit_amount: args.price,
   currency: args.currency || "usd",
-  "recurring[interval]": "year",
+  "recurring[interval]": interval,
 });
 console.log("Price created:", price.id);
 
@@ -62,9 +70,13 @@ const link = await stripe(secretKey, "payment_links", {
   "line_items[0][quantity]": "1",
 });
 
-console.log("\nPayment link created.");
+console.log(`\n${interval === "year" ? "Annual" : "Monthly"} payment link created.`);
 console.log("URL:", link.url);
-console.log("\nPut this URL in site/index.html's Pro plan CTA (replace the mailto: link).");
+console.log(
+  `\nPut this URL in site/index.html's BILLING.${interval === "year" ? "year" : "month"}.mailSubject spot ` +
+    `(replace the mailto: link for that billing period in the toggle)."`
+);
+console.log("\nIf you haven't already, run this again for the other billing period.");
 console.log("\nDon't forget: Stripe Dashboard > Developers > Webhooks > add endpoint");
 console.log("pointing to https://manoo-payments.YOUR-SUBDOMAIN.workers.dev/webhook/stripe");
 console.log('subscribed to the "invoice.paid" event, then copy its signing secret into');

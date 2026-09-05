@@ -14,4 +14,8 @@ id = "REPLACE_WITH_KV_NAMESPACE_ID"
 #   MANOO_PRIVATE_KEY_PEM  — the Ed25519 private key from licensing/private-key.pem
 #   RESEND_API_KEY         — Resend API key for sending the license email
 #   SELLER_NOTIFY_EMAIL    — Jamiel's email, gets a copy of every sale
-#   EXPECTED_AMOUNT_CENTS  — the price you charge, in cents, e.g. "2900" for $29.00 — rejects wrong-amount payments
+#
+# No EXPECTED_AMOUNT_CENTS secret anymore — src/index.mjs hardcodes both
+# known prices (4900 = $49.00/year, 600 = $6.00/month) and the license
+# length each one grants, so it accepts either and rejects anything else.
+# Update LICENSE_DAYS_BY_AMOUNT there (not here) if the price ever changes.

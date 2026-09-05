@@ -16,7 +16,14 @@
 //    webhook never issues two licenses.
 
 const PLAN = "pro";
-const LICENSE_DAYS = 380; // a little over a year of margin past the billing period
+// Manoo Pro sells as two separate Stripe prices (annual $49, monthly $6)
+// — matched by exact amount so each issues a license valid for a little
+// longer than its own billing period, not the other one's. An unrecognized
+// amount is rejected rather than guessed at (see the check below).
+const LICENSE_DAYS_BY_AMOUNT = {
+  4900: 380, // annual: a little over a year of margin past the billing period
+  600: 35, // monthly: a few days of margin past the billing period
+};
 
 export default {
   async fetch(request, env) {
@@ -65,9 +72,9 @@ async function handleWebhook(request, env) {
     return new Response("not paid", { status: 200 });
   }
 
-  const expected = Number(env.EXPECTED_AMOUNT_CENTS);
-  if (Number.isFinite(expected) && invoice.amount_paid < expected) {
-    console.log(`Invoice ${invoiceId} amount ${invoice.amount_paid} is below expected ${expected} — skipping.`);
+  const licenseDays = LICENSE_DAYS_BY_AMOUNT[invoice.amount_paid];
+  if (!licenseDays) {
+    console.log(`Invoice ${invoiceId} amount ${invoice.amount_paid} doesn't match either known price (4900 or 600) — skipping.`);
     return new Response("amount mismatch", { status: 200 });
   }
 
@@ -77,7 +84,7 @@ async function handleWebhook(request, env) {
     return new Response("no customer email", { status: 200 });
   }
 
-  const licenseKey = await mintLicense(email, env.MANOO_PRIVATE_KEY_PEM);
+  const licenseKey = await mintLicense(email, env.MANOO_PRIVATE_KEY_PEM, licenseDays);
   await sendLicenseEmail(env, email, licenseKey);
 
   await env.PROCESSED_PAYMENTS.put(`event:${event.id}`, JSON.stringify({ email, invoiceId, at: new Date().toISOString() }), {
@@ -138,12 +145,12 @@ function timingSafeEqual(a, b) {
   return diff === 0;
 }
 
-export async function mintLicense(email, privateKeyPem) {
+export async function mintLicense(email, privateKeyPem, licenseDays) {
   const der = pemToArrayBuffer(privateKeyPem);
   const key = await crypto.subtle.importKey("pkcs8", der, { name: "Ed25519" }, false, ["sign"]);
 
   const issuedAt = new Date();
-  const expiresAt = new Date(issuedAt.getTime() + LICENSE_DAYS * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(issuedAt.getTime() + licenseDays * 24 * 60 * 60 * 1000);
   const payload = JSON.stringify({
     email,
     plan: PLAN,

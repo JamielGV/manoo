@@ -14,7 +14,7 @@ clientes empieza ya, no al final.
    para esto.
 2. Esta semana: un post corto en un lugar donde ya haya gente usando
    Claude Code (comunidad/Discord de Claude Code, r/ClaudeAI, X/Twitter)
-   mostrando Manoo en acción — un GIF corto del HUD neon + split-screen
+   mostrando Manoo en acción — un GIF corto del cursor neón + split-screen
    funciona mejor que texto. Dime cuando quieras y te preparo el clip/post.
 
 **Pista 2 — Quitar la fricción para pagar (esta semana, casi todo gratis)**
@@ -42,8 +42,8 @@ vender es repetir la Pista 1 con más alcance.
 ## ✅ Ya hecho (gratis, listo)
 
 - Producto funcionando: Free (25 acciones/sesión) + Pro (ilimitado + audit log), con licencias firmadas Ed25519.
-- Split-screen automático con el IDE (para que siempre veas a Claude Code mientras Manoo actúa) + HUD neon en la esquina que muestra el mouse y lo que se está escribiendo en vivo.
-- Página de aterrizaje con precios (`site/index.html`) — Free $0, Pro $29 USD/año (confirmado).
+- Split-screen automático con el IDE (para que siempre veas a Claude Code mientras Manoo actúa) + cursor neón que muestra que Manoo está trabajando.
+- Página de aterrizaje con precios (`site/index.html`) — Free $0, Pro $49 USD/año o $6 USD/mes (actualizado tras análisis de mercado).
 - Términos de Servicio (`LEGAL_TERMINOS_DE_SERVICIO.md`) y Aviso de Privacidad (`LEGAL_AVISO_DE_PRIVACIDAD.md`) — borradores funcionales.
 - Logo real de Corporación Jamiel integrado.
 - Investigación de dominio (`manoo.ai`/`manoo.dev` libres) y marca (borrador de clases 9/42 para IMPI).
@@ -95,6 +95,6 @@ En orden de impacto:
 
 ## Decisiones ya tomadas (por mí, a tu pedido)
 
-- Precio de Manoo Pro: **$29 USD/año** confirmado, se queda como está en la página.
-- Solicitante de la marca ante IMPI: **Corporación Jamiel** (persona moral), no Jamiel como persona física — ver `TRADEMARK_IMPI_BORRADOR.md`.
+- Precio de Manoo Pro: **$49 USD/año** (o $6 USD/mes) — actualizado tras revisar precios de la competencia (agentes de escritorio comparables cobran $20-79/mes por tener servidor propio).
+- Solicitante de la marca ante IMPI: **Jamiel García Velázquez, persona física** — "Corporación Jamiel" es nombre comercial, no una persona moral registrada — ver `TRADEMARK_IMPI_BORRADOR.md`.
 - Usuario de GitHub: **JamielGV** — el plugin ya está público ahí.
