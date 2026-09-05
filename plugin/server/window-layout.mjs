@@ -189,18 +189,26 @@ export async function placeOverlayWindow({
       await wmctrl(["-i", "-r", overlay.id, "-b", "remove,maximized_vert,maximized_horz"]);
       await wmctrl(["-i", "-r", overlay.id, "-e", `0,${geom.x},${geom.y},${geom.w},${geom.h}`]);
 
-      // Firefox enforces its own minimum chrome width/height, silently
-      // overriding a request smaller than that — re-anchor to the corner
-      // using whatever size actually stuck, instead of assuming it fit.
-      const [placed] = (await listWindows()).filter((w) => w.id === overlay.id);
-      if (placed && (placed.w !== geom.w || placed.h !== geom.h)) {
-        const fixed = {
+      // The window manager doesn't always honor a geometry request
+      // exactly — Firefox enforces its own minimum chrome width/height
+      // (silently overriding a request smaller than that), and re-applying
+      // a corrected geometry can itself land a few pixels off again. Keep
+      // re-anchoring to the corner using whatever actually stuck until it
+      // settles, instead of assuming one correction pass is enough.
+      let want = geom;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const [placed] = (await listWindows()).filter((w) => w.id === overlay.id);
+        if (!placed) break;
+        if (placed.x === want.x && placed.y === want.y && placed.w === want.w && placed.h === want.h) {
+          break;
+        }
+        want = {
           x: wa.x + wa.w - placed.w,
           y: wa.y + wa.h - placed.h,
           w: placed.w,
           h: placed.h,
         };
-        await wmctrl(["-i", "-r", overlay.id, "-e", `0,${fixed.x},${fixed.y},${fixed.w},${fixed.h}`]);
+        await wmctrl(["-i", "-r", overlay.id, "-e", `0,${want.x},${want.y},${want.w},${want.h}`]);
       }
 
       await wmctrl(["-i", "-r", overlay.id, "-b", "add,above,skip_taskbar,skip_pager"]);
