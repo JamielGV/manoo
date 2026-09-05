@@ -66,12 +66,18 @@ re-read coordinates from it and retry.
 
 **If a permission classifier blocks a sensitive action** (entering
 credentials, filling a real account/financial signup form), don't try to
-route around it — tell the user plainly what you were about to do and
-why, and let them finish that part by hand. You don't need to re-run
-`split_screen` or worry about the layout covering the window they're now
-using themselves: the layout idle timer holds off on its own while it
-detects real (non-Manoo) mouse/keyboard activity, specifically so it
-doesn't maximize the IDE back over a window mid-handoff like that.
+route around it — call `hold_screen` right away, then tell the user
+plainly what you were about to do and why, and let them finish that part
+by hand. Manoo's own server has no way to detect a classifier block
+itself (it happens above the plugin entirely) — only you see it, from
+the tool-call error — so `hold_screen` is how you tell Manoo about it:
+it splits the screen immediately and pins the layout there (skipping the
+normal ~60s idle revert) for up to 30 minutes, so the window the user
+needs to type into doesn't get covered before they've even started (a
+plain "wait for real activity" check can't help with that gap — there's
+no activity yet for it to notice). Call `release_screen_hold` once
+they're done, or once you resume acting yourself, so normal idle
+behavior resumes instead of holding the split indefinitely.
 
 ## The real cursor glows neon only while actually processing
 

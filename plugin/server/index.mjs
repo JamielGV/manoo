@@ -81,6 +81,22 @@ const HUMAN_ACTIVE_GRACE_MS = 5000;
 let cursorIdleTimer = null;
 let layoutIdleTimer = null;
 
+// Explicit hold, separate from the human-activity check above: a
+// permission classifier can block Claude from filling in something
+// sensitive (a real signup form's password field, banking info) BEFORE
+// the human has touched anything themselves — there's no activity yet
+// for that check to notice, so the plain timer would still cover the
+// window right as the user goes to start typing. Manoo's own server has
+// no way to detect a classifier block (it happens above this process
+// entirely) — only Claude does, from the tool-call error — so this is a
+// tool Claude calls explicitly the moment that happens, rather than
+// something inferred automatically. `holdUntil` is a hard safety-net
+// cap, not a promise the hold lasts that long: `release_screen_hold`
+// should still be called once the user's done, this just guarantees
+// recovery if that's ever missed.
+const HOLD_MAX_MS = 30 * 60 * 1000;
+let holdUntil = 0;
+
 async function goIdle() {
   await maximizeIdeWindow().catch(() => {});
   // Minimize (never close) the window Manoo was driving — per explicit
@@ -114,9 +130,10 @@ function scheduleLayoutIdle() {
 }
 
 async function checkLayoutIdle() {
-  if (msSinceLastHumanActivity() < HUMAN_ACTIVE_GRACE_MS) {
+  const holding = Date.now() < holdUntil;
+  if (holding || msSinceLastHumanActivity() < HUMAN_ACTIVE_GRACE_MS) {
     clearTimeout(layoutIdleTimer);
-    layoutIdleTimer = setTimeout(checkLayoutIdle, HUMAN_ACTIVE_GRACE_MS);
+    layoutIdleTimer = setTimeout(checkLayoutIdle, holding ? 5000 : HUMAN_ACTIVE_GRACE_MS);
     layoutIdleTimer.unref?.();
     return;
   }
@@ -332,6 +349,52 @@ server.registerTool(
       `Split screen: IDE (${result.ide}) on the ${ide_side}` +
       (result.target ? `, "${result.target}" on the other side.` : ", nothing else to place on the other side.")
     );
+  }
+);
+
+server.registerTool(
+  "hold_screen",
+  {
+    title: "Hold the split screen for manual user input",
+    description:
+      "Call this the moment something blocks you from filling in sensitive " +
+      "input yourself — a real account signup's password field, banking/" +
+      "identity info, anything a permission classifier refuses — right " +
+      "before telling the user to finish it by hand. Splits the screen " +
+      "immediately and pins it there for up to 30 minutes (skipping the " +
+      "normal ~60s idle revert to the IDE), so the window they need to type " +
+      "into doesn't get covered while they work, even if they take a while " +
+      "to start. Always call release_screen_hold once they're done, or once " +
+      "you resume acting yourself.",
+    inputSchema: {},
+  },
+  async () => {
+    holdUntil = Date.now() + HOLD_MAX_MS;
+    const result = await splitScreenWithIde().catch(() => ({ ok: false, reason: "error" }));
+    clearTimeout(layoutIdleTimer);
+    layoutIdleTimer = setTimeout(checkLayoutIdle, 5000);
+    layoutIdleTimer.unref?.();
+    return textResult(
+      result.ok
+        ? `Screen split and held for manual input — won't revert to the IDE until release_screen_hold is called (or 30 minutes pass, as a safety net).`
+        : `Hold is active, but could not split the screen (${result.reason}) — the layout may already be in the right shape, or there's nothing to split with.`
+    );
+  }
+);
+
+server.registerTool(
+  "release_screen_hold",
+  {
+    title: "Release a screen hold",
+    description:
+      "Call once the user has finished the manual entry hold_screen was " +
+      "called for, or once you resume acting yourself — lets the normal " +
+      "idle timer resume instead of holding the split indefinitely.",
+    inputSchema: {},
+  },
+  async () => {
+    holdUntil = 0;
+    return textResult("Screen hold released — normal idle behavior resumes.");
   }
 );
 

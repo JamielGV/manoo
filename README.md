@@ -305,6 +305,22 @@ waiting for the current action's own cleanup.
   human touched anything within the last `HUMAN_ACTIVE_GRACE_MS`
   (5000ms), reschedules instead of reverting — repeating until they've
   also gone quiet.
+- **`hold_screen` / `release_screen_hold` tools — an explicit pin for the
+  gap *before* that activity check has anything to notice.** Found live,
+  right after building the check above: the human hadn't touched
+  anything YET (still deciding, or about to start typing into the
+  blocked form) when the plain 60s timer fired, maximizing the IDE over
+  the window before they'd gotten the chance to. Manoo's server has no
+  way to detect a classifier block itself (it happens above this
+  process, outside the plugin entirely) — only Claude sees it, from the
+  tool-call error — so `hold_screen` is a tool Claude calls explicitly
+  the moment that happens: splits the screen immediately and sets
+  `holdUntil` 30 minutes out (`HOLD_MAX_MS`, a safety-net cap, not a
+  promise it lasts that long), which `checkLayoutIdle()` checks before
+  the human-activity check and reschedules on while active, same as
+  that check does. `release_screen_hold` clears it once Claude resumes
+  or the user's done, since a hold is meant to be a deliberate pin, not
+  a background trigger Manoo infers.
 - **Restore on shutdown:** the first time the layout is actually touched,
   `window-layout.mjs` captures the IDE and target windows' original
   position/size, and `cursor-theme.mjs` captures the original cursor
