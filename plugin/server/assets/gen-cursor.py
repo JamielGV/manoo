@@ -107,12 +107,22 @@ def make_frame(glow_blur, glow_alpha):
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 
     # Glow: blurred solid silhouette underneath everything — this is what
-    # pulses frame to frame, like a heartbeat behind the hand.
-    glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    # pulses frame to frame, like a heartbeat behind the hand. Built at
+    # full alpha and scaled down afterward (rather than drawn at low alpha
+    # then blurred) so it's pure neon light, never a dark shadow: blurring
+    # a low-alpha shape whose "transparent" background defaults to black
+    # RGB mixes black into the faded edge. Keeping the background at the
+    # same color as the shape (just alpha 0) means blur only ever softens
+    # the alpha channel — the color underneath is cyan everywhere, so
+    # there's nothing dark for it to blend in.
+    glow = Image.new("RGBA", (W, H), (*STROKE, 0))
     d = ImageDraw.Draw(glow)
-    hand_shapes(d, (*STROKE, glow_alpha))
-    paste_thumb(glow, (*STROKE, glow_alpha))
+    hand_shapes(d, (*STROKE, 255))
+    paste_thumb(glow, (*STROKE, 255))
     glow = glow.filter(ImageFilter.GaussianBlur(glow_blur * SS))
+    r, g, b, a = glow.split()
+    a = a.point(lambda v: int(v * glow_alpha / 255))
+    glow = Image.merge("RGBA", (r, g, b, a))
     img.alpha_composite(glow)
 
     # Mesh-filled hand, clipped to the hand silhouette.
