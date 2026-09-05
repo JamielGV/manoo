@@ -9,6 +9,13 @@ import { uIOhook, UiohookKey } from "uiohook-napi";
 
 let suppressUntil = 0;
 let interference = null;
+// Updated on every real (non-Manoo) input event, unlike `interference`
+// (which only latches the first one until something consumes it). Used
+// to tell "is a human actively touching the mouse/keyboard right now" —
+// e.g. while they've taken over to fill in something sensitive Manoo
+// handed off (a classifier block, a password field) — separately from
+// the one-shot interference-detection/handoff-message mechanism below.
+let lastHumanActivityAt = 0;
 
 // Escape gets its own, much narrower suppression window than the general
 // one: a `type` action's window can last several seconds (long strings),
@@ -55,7 +62,9 @@ function isSuppressed() {
 }
 
 function mark(type, detail) {
-  if (!isSuppressed() && !interference) {
+  if (isSuppressed()) return;
+  lastHumanActivityAt = Date.now();
+  if (!interference) {
     interference = { type, detail, atMs: Date.now(), at: new Date().toISOString() };
   }
 }
@@ -63,6 +72,7 @@ function mark(type, detail) {
 uIOhook.on("keydown", (e) => {
   if (e.keycode === UiohookKey.Escape) {
     if (Date.now() < escapeSuppressUntil) return; // Manoo's own Escape
+    lastHumanActivityAt = Date.now();
     interference = { type: "escape", detail: "el usuario presionó Escape", atMs: Date.now(), at: new Date().toISOString() };
     emergencyStopHandler?.();
     return;
@@ -96,6 +106,14 @@ export function consumeHumanInterference() {
     return null;
   }
   return found;
+}
+
+/** Milliseconds since the last real (non-Manoo) mouse/keyboard event, or
+ * Infinity if none has happened yet this session. Used to hold off
+ * reverting the split/cursor layout while the human is actively using the
+ * screen themselves — see the comment on `lastHumanActivityAt` above. */
+export function msSinceLastHumanActivity() {
+  return lastHumanActivityAt === 0 ? Infinity : Date.now() - lastHumanActivityAt;
 }
 
 export function stopInputMonitor() {

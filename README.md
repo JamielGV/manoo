@@ -290,6 +290,21 @@ waiting for the current action's own cleanup.
   triggers a tool call also refocuses the IDE. If this keeps happening:
   `split_screen` re-run a moment later, or a manual resize, both still
   work.
+- **The layout idle timer holds off while a real human is actively using
+  the screen, even if Manoo itself hasn't acted.** Found live: a
+  permission classifier blocked a sensitive action (filling a real
+  financial-account signup form) and handed control to the user to
+  finish by hand — but nothing about that showed up as a Manoo action,
+  so the plain 60s timer would have maximized the IDE right over the
+  window they were actively typing into. `input-monitor.mjs` now tracks
+  `lastHumanActivityAt` on every real (non-Manoo) input event, not just
+  the first one until consumed (that's what the existing one-shot
+  `interference` handoff-message mechanism already did, and still does,
+  separately); `index.mjs`'s `checkLayoutIdle()` checks
+  `msSinceLastHumanActivity()` before calling `goIdle()` and, if the
+  human touched anything within the last `HUMAN_ACTIVE_GRACE_MS`
+  (5000ms), reschedules instead of reverting — repeating until they've
+  also gone quiet.
 - **Restore on shutdown:** the first time the layout is actually touched,
   `window-layout.mjs` captures the IDE and target windows' original
   position/size, and `cursor-theme.mjs` captures the original cursor

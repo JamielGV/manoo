@@ -64,6 +64,15 @@ screenshot, so Manoo refuses to click/type blindly and aborts instead.
 The very next screenshot will show the settled split layout — just
 re-read coordinates from it and retry.
 
+**If a permission classifier blocks a sensitive action** (entering
+credentials, filling a real account/financial signup form), don't try to
+route around it — tell the user plainly what you were about to do and
+why, and let them finish that part by hand. You don't need to re-run
+`split_screen` or worry about the layout covering the window they're now
+using themselves: the layout idle timer holds off on its own while it
+detects real (non-Manoo) mouse/keyboard activity, specifically so it
+doesn't maximize the IDE back over a window mid-handoff like that.
+
 ## The real cursor glows neon only while actually processing
 
 The actual system pointer — not a separate window, the real cursor itself

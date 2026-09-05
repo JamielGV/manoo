@@ -20,7 +20,7 @@ import { tmpdir } from "node:os";
 import { dirname } from "node:path";
 import { loadLicense, verifyLicenseString, LICENSE_FILE } from "./license.mjs";
 import { logAction, AUDIT_LOG_FILE } from "./audit.mjs";
-import { beginManooAction, beginEscapeAction, consumeHumanInterference, onEmergencyStop } from "./input-monitor.mjs";
+import { beginManooAction, beginEscapeAction, consumeHumanInterference, onEmergencyStop, msSinceLastHumanActivity } from "./input-monitor.mjs";
 import { splitScreenWithIde, maximizeIdeWindow, minimizeTargetWindow, focusIdeWindow, restoreOriginalLayout } from "./window-layout.mjs";
 import { withMouseLocked, emergencyUnlock } from "./mouse-lock.mjs";
 import { applyNeonCursor, restoreCursorTheme } from "./cursor-theme.mjs";
@@ -69,6 +69,15 @@ mouse.config.mouseSpeed = 3000;
 // per the cursor's actual purpose. Two independent timers fix both.
 const CURSOR_IDLE_MS = 3000;
 const LAYOUT_IDLE_MS = 60000;
+// If the human is actively touching the mouse/keyboard themselves — most
+// often because they took over to fill in something sensitive Manoo
+// handed off (a permission classifier blocked an action, a password
+// field) — the layout timer must NOT minimize/maximize out from under
+// them just because Manoo itself hasn't acted in 60s. Found live: a
+// classifier-blocked signup form left the user filling it in by hand,
+// and nothing about that showed up as a Manoo action, so the plain timer
+// would have covered the very window they were typing into.
+const HUMAN_ACTIVE_GRACE_MS = 5000;
 let cursorIdleTimer = null;
 let layoutIdleTimer = null;
 
@@ -93,6 +102,27 @@ async function goIdle() {
   }
 }
 
+/** Re-armed by markProcessing() on every action instead of calling
+ * goIdle() directly — checks for recent real human activity first, and
+ * if the human is mid-handoff (typing/clicking themselves right now),
+ * postpones rather than minimizing/maximizing out from under them. Keeps
+ * re-checking every HUMAN_ACTIVE_GRACE_MS until they've also gone quiet. */
+function scheduleLayoutIdle() {
+  clearTimeout(layoutIdleTimer);
+  layoutIdleTimer = setTimeout(checkLayoutIdle, LAYOUT_IDLE_MS);
+  layoutIdleTimer.unref?.();
+}
+
+async function checkLayoutIdle() {
+  if (msSinceLastHumanActivity() < HUMAN_ACTIVE_GRACE_MS) {
+    clearTimeout(layoutIdleTimer);
+    layoutIdleTimer = setTimeout(checkLayoutIdle, HUMAN_ACTIVE_GRACE_MS);
+    layoutIdleTimer.unref?.();
+    return;
+  }
+  await goIdle();
+}
+
 /** Awaited by `gated()` before the actual handler runs — the split must
  * be settled before a click fires, or it could land on the wrong window
  * mid-transition. The cursor swap doesn't need the same guarantee, but is
@@ -115,9 +145,7 @@ async function markProcessing() {
   clearTimeout(cursorIdleTimer);
   cursorIdleTimer = setTimeout(() => restoreCursorTheme(), CURSOR_IDLE_MS);
   cursorIdleTimer.unref?.();
-  clearTimeout(layoutIdleTimer);
-  layoutIdleTimer = setTimeout(goIdle, LAYOUT_IDLE_MS);
-  layoutIdleTimer.unref?.();
+  scheduleLayoutIdle();
   return Boolean(splitResult && splitResult.layoutChanged);
 }
 
