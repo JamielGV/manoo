@@ -179,6 +179,26 @@
     background: var(--accent);
     color: #1a0f04;
   }
+  #email-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%) translateY(12px);
+    background: #0f1420;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.7rem 1.1rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 10;
+  }
+  #email-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 </style>
 </head>
 <body>
@@ -249,5 +269,32 @@
     <img class="footer-logo" src="assets/corporacion-jamiel-logo.png" alt="Corporación Jamiel" />
     Manoo by <a href="#">Corporación Jamiel</a>
   </footer>
+  <div id="email-toast" role="status"></div>
+  <script>
+    // The buttons below are still real mailto: links (so a visitor with a
+    // configured mail client gets a compose window as before) — this just
+    // also copies the address to the clipboard and shows it, so someone
+    // without one (no default client set, mobile, Chromebook...) isn't
+    // left with a click that visibly does nothing.
+    (function () {
+      var toast = document.getElementById('email-toast');
+      var hideTimer = null;
+      document.querySelectorAll('a.cta[href^="mailto:"]').forEach(function (link) {
+        link.addEventListener('click', function () {
+          var email = link.href.replace(/^mailto:/, '').split('?')[0];
+          var decoded = decodeURIComponent(email);
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(decoded).catch(function () {});
+          }
+          toast.textContent = 'Correo copiado: ' + decoded;
+          toast.classList.add('show');
+          clearTimeout(hideTimer);
+          hideTimer = setTimeout(function () {
+            toast.classList.remove('show');
+          }, 4000);
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

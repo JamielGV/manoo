@@ -81,9 +81,13 @@ known trade-off (safe-by-default over precise), not a bug.
 
 **Escape is a dedicated hard-stop.** Pressing Escape always counts as the
 user taking control, even mid-action (e.g. partway through a long `type`
-call) — it isn't subject to the 2-second staleness window that ambient
-interference is. You'll see a message specifically about Escape; treat it
-exactly like any other human-takeover message: stop and wait.
+call) — it gets a longer staleness allowance (8s) than ambient
+interference (2s) does. You'll see a message specifically about Escape;
+treat it exactly like any other human-takeover message: stop and wait.
+If you sent Escape yourself moments ago (via the `key` tool) and then a
+takeover message about Escape shows up on some later, unrelated action,
+that's this same self-triggered edge case rather than a fresh press —
+still stop and check with the user rather than assuming it's spurious.
 
 **The user's physical mouse/touchpad is briefly disabled during each
 action** (not between actions) so a stray touchpad brush can't land a

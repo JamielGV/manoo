@@ -26,7 +26,7 @@ export function onEmergencyStop(fn) {
   emergencyStopHandler = fn;
 }
 
-export function beginEscapeAction(ms = 300) {
+export function beginEscapeAction(ms = 500) {
   escapeSuppressUntil = Math.max(escapeSuppressUntil, Date.now() + ms);
 }
 
@@ -36,6 +36,19 @@ export function beginEscapeAction(ms = 300) {
 // which is real input but not someone reaching for the mouse/keyboard to
 // override an in-progress action. Only recent-enough activity blocks.
 const STALE_MS = 2000;
+
+// Escape gets a longer staleness allowance than other interference (real
+// incident: Manoo's own Escape — sent via the `key` tool — arrived at
+// this hook slightly after its self-suppression window closed, and
+// because `type/click/scroll` tools are the only ones that ever call
+// consumeHumanInterference(), it sat unread through several unrelated
+// Bash/Read/Edit calls before finally surfacing at the next real action —
+// reported as if the user had *just* pressed Escape, seconds or tool-calls
+// later. Escape genuinely shouldn't be treated as ambient noise the way a
+// stray mousemove is, but "never discard it" was too strong; this bounds
+// it to "recent enough to plausibly be the same moment" without being an
+// indefinitely-armed tripwire from Manoo's own past action.
+const ESCAPE_STALE_MS = 8000;
 
 function isSuppressed() {
   return Date.now() < suppressUntil;
@@ -76,9 +89,10 @@ export function beginManooAction(ms = 500) {
 export function consumeHumanInterference() {
   const found = interference;
   interference = null;
-  // Escape is a deliberate stop gesture, never ambient noise — it counts
-  // no matter how long ago it was pressed, unlike other stale interference.
-  if (found && found.type !== "escape" && Date.now() - found.atMs > STALE_MS) {
+  if (!found) return null;
+  const age = Date.now() - found.atMs;
+  const staleAfter = found.type === "escape" ? ESCAPE_STALE_MS : STALE_MS;
+  if (age > staleAfter) {
     return null;
   }
   return found;

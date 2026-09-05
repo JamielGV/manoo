@@ -81,9 +81,17 @@ chat message to Claude would block Claude's very next action almost every
 time (found live: typing "corrige" repeatedly blocked the next click,
 every time, because "corrige" starts with the letter it kept reporting).
 Only activity recent enough to plausibly mean "the human is touching
-something right now" counts. **Escape is exempt from this staleness
-discard** — it's a deliberate stop gesture, not ambient noise, so it
-always counts, however long ago it was checked for.
+something right now" counts. **Escape gets its own longer allowance (8s,
+not 2s)** — it's a deliberate stop gesture, not ambient noise, so it
+shouldn't be discarded as fast — but not an indefinite one. Found live:
+making it exempt from staleness entirely was itself a bug — Manoo's own
+Escape (via the `key` tool) arrived at the input hook just after its
+own suppression window closed, and since only gated action tools ever
+call `consumeHumanInterference()`, it sat unread through
+several unrelated Bash/Read/Edit calls before surfacing at the next real
+action, reported as if the user had *just* pressed Escape, seconds later.
+8 seconds is long enough to cover a real human's next action without
+being a lingering false trip from Manoo's own past one.
 
 ### Mouse lock during each action (implemented, verified)
 
