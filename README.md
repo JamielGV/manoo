@@ -31,6 +31,10 @@ machine.
     this process's own parent chain (not by title, which changes)
   - `server/overlay-server.mjs` — local HTTP+SSE server behind the neon HUD
     (see "Screen layout & HUD" below)
+  - `server/cursor-theme.mjs` — swaps the real system cursor for a
+    neon-glow version while Manoo is active (see "Screen layout & HUD"
+    below); `server/assets/gen-cursor.py` + `server/assets/left_ptr` are
+    the one-time generator and its committed output
   - `server/mouse-lock.mjs` — disables the user's physical mouse/touchpad
     for the duration of a single action (see "Mouse lock" below)
   - `skills/computer-use/SKILL.md` — teaches Claude the
@@ -147,14 +151,32 @@ waiting for the current action's own cleanup.
   than re-guessing "the last other window" on every call — found live that
   the naive guess could mistake an unrelated window the user opened in
   parallel (a file manager) for the app being driven.
+- **Neon cursor (implemented, verified):** the real system pointer is
+  swapped for a neon-glow version while Manoo is active —
+  `cursor-theme.mjs` generates it once (`assets/gen-cursor.py`, Pillow +
+  `xcursorgen`, committed as `assets/left_ptr`), installs a
+  `~/.icons/manoo-neon` theme that `Inherits=` whatever the user's real
+  theme was (so only the pointer shape changes, not text-cursors/resize
+  handles/etc.), and live-switches to it via `xfconf-query -c xsettings -p
+  /Gtk/CursorThemeName -s manoo-neon` (XFCE-specific). Restored back to
+  the captured original theme name on shutdown, the same way as the
+  window layout and mouse lock. Real bug fixed during first testing: the
+  `-p` flag was missing from the xfconf-query calls, which fails loudly
+  enough (`No se ha especificado ninguna propiedad`) that it should have
+  been obvious immediately, but was silently swallowed by the function's
+  own best-effort try/catch until tested with the try/catch removed.
+  **This replaced an earlier version** that instead opened a separate
+  corner window with a mini-map and a proxy dot tracking the cursor
+  position — a real user correctly pointed out that isn't what "neon
+  cursor glow" should mean, so the HUD below no longer tracks the cursor
+  at all, only typing.
 - **Neon HUD overlay:** a small always-on-top window pinned to the
   bottom-right corner (opened in Firefox, positioned via `wmctrl`) shows a
-  pulsing neon dot tracking the cursor on a mini-map, plus a flashing ticker
-  for the last thing typed or key pressed. Pushed live from the MCP server
-  over Server-Sent Events (`overlay-server.mjs`) — every mouse/click/
-  scroll/type/key tool feeds it, no extra calls needed. Excluded from
-  `split_screen`'s target-window detection so it's never mistaken for the
-  app being driven.
+  flashing ticker for the last thing typed or key pressed. Pushed live
+  from the MCP server over Server-Sent Events (`overlay-server.mjs`) —
+  every scroll/type/key tool feeds it, no extra calls needed. Excluded
+  from `split_screen`'s target-window detection so it's never mistaken
+  for the app being driven.
 - **Restore on shutdown:** the first time the layout is actually touched,
   `window-layout.mjs` captures the IDE and target windows' original
   position/size. When Manoo stops operating — session closed, process

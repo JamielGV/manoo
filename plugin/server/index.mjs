@@ -24,6 +24,7 @@ import { beginManooAction, beginEscapeAction, consumeHumanInterference, onEmerge
 import { splitScreenWithIde, placeOverlayWindow, restoreOriginalLayout } from "./window-layout.mjs";
 import { startOverlayServer } from "./overlay-server.mjs";
 import { withMouseLocked, emergencyUnlock } from "./mouse-lock.mjs";
+import { applyNeonCursor, restoreCursorTheme } from "./cursor-theme.mjs";
 import { spawn } from "node:child_process";
 
 // A real Escape press always force-unlocks the mouse immediately, rather
@@ -38,6 +39,7 @@ onEmergencyStop(() => emergencyUnlock());
 function shutdown() {
   emergencyUnlock();
   restoreOriginalLayout();
+  restoreCursorTheme();
   process.exit();
 }
 process.on("SIGINT", shutdown);
@@ -60,10 +62,13 @@ let activated = false;
 async function ensureActivated() {
   if (activated) return;
   activated = true;
-  // A small always-on-top window with a live neon dot tracking the cursor
-  // and a ticker for what's being typed, so the user can tell Manoo is
-  // working without staring at the exact pixel it's touching. Best-effort:
-  // no X11 display, no wmctrl, no Firefox — Manoo still works, just quiet.
+  // The real system cursor becomes a neon glow — see cursor-theme.mjs.
+  // Best-effort: not XFCE, no writable ~/.icons — Manoo still works, the
+  // cursor just stays whatever it already was.
+  await applyNeonCursor().catch(() => {});
+  // A small always-on-top window with a ticker for what's being typed, so
+  // the user can tell Manoo is working. Best-effort: no X11 display, no
+  // wmctrl, no Firefox — Manoo still works, just quiet.
   try {
     const overlay = await startOverlayServer();
     const overlayWindow = spawn(
@@ -73,9 +78,7 @@ async function ensureActivated() {
     );
     overlayWindow.unref();
     await placeOverlayWindow();
-    const screenW = await screen.width();
-    const screenH = await screen.height();
-    pushOverlay = (event) => overlay.push({ ...event, screenW, screenH });
+    pushOverlay = (event) => overlay.push(event);
   } catch {
     // Best-effort HUD — see comment above.
   }
@@ -319,7 +322,6 @@ server.registerTool(
   gated("mouse_move", async ({ x, y }) => {
     beginManooAction(150);
     await withMouseLocked(() => mouse.setPosition(new Point(x, y)));
-    pushOverlay({ kind: "mouse", x, y });
     return textResult(`Moved cursor to (${x}, ${y})`);
   })
 );
@@ -341,7 +343,6 @@ function registerClickTool(name, button, label) {
         await mouse.click(button);
         return mouse.getPosition();
       });
-      pushOverlay({ kind: "mouse", x: p.x, y: p.y });
       return textResult(`${label} at (${p.x}, ${p.y})`);
     })
   );
@@ -367,7 +368,6 @@ server.registerTool(
       await mouse.doubleClick(Button.LEFT);
       return mouse.getPosition();
     });
-    pushOverlay({ kind: "mouse", x: p.x, y: p.y });
     return textResult(`Double clicked at (${p.x}, ${p.y})`);
   })
 );
@@ -393,7 +393,6 @@ server.registerTool(
       await mouse.setPosition(new Point(end_x, end_y));
       await mouse.releaseButton(Button.LEFT);
     });
-    pushOverlay({ kind: "mouse", x: end_x, y: end_y });
     return textResult(`Dragged from (${start_x}, ${start_y}) to (${end_x}, ${end_y})`);
   })
 );

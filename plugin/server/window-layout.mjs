@@ -169,7 +169,7 @@ export async function splitScreenWithIde({ ideSide = "left" } = {}) {
  * it may take a moment to map — retries a few times. */
 export async function placeOverlayWindow({
   width = 240,
-  height = 190,
+  height = 110,
   attempts = 10,
   delayMs = 300,
 } = {}) {
