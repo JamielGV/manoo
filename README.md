@@ -122,13 +122,23 @@ waiting for the current action's own cleanup.
 
 ## Screen layout & HUD (implemented, verified)
 
-- **Split screen with the IDE:** on startup — and now before every single
-  action, not just once — `window-layout.mjs` tiles the
+- **Lazy activation:** none of this runs when the MCP server process
+  starts. `index.mjs`'s `ensureActivated()` fires once, on the first
+  actual Manoo tool call (`screenshot` included) — the moment the user has
+  asked Claude to do something with the screen, not a moment sooner or
+  later. Installing the plugin and Claude Code launching its process
+  should never by themselves pop up a window or move anything.
+- **Split screen with the IDE:** on activation — and before every single
+  action after that, not just once — `window-layout.mjs` tiles the
   Claude Code / IDE window and whatever app Manoo is driving into left/right
   halves of the work area (via `wmctrl`), so the user never loses sight of
   the conversation while Manoo acts. The `split_screen` tool re-runs this on
   demand — useful after opening a new target app window mid-task, or if the
-  layout drifts.
+  layout drifts. Target-window identification is sticky (remembers the
+  window id once picked, keeps using it as long as it still exists) rather
+  than re-guessing "the last other window" on every call — found live that
+  the naive guess could mistake an unrelated window the user opened in
+  parallel (a file manager) for the app being driven.
 - **Neon HUD overlay:** a small always-on-top window pinned to the
   bottom-right corner (opened in Firefox, positioned via `wmctrl`) shows a
   pulsing neon dot tracking the cursor on a mini-map, plus a flashing ticker
@@ -137,8 +147,23 @@ waiting for the current action's own cleanup.
   scroll/type/key tool feeds it, no extra calls needed. Excluded from
   `split_screen`'s target-window detection so it's never mistaken for the
   app being driven.
-- Both are best-effort: no X11 display, no `wmctrl`, or no Firefox just
-  means Manoo runs without them — never a hard failure.
+- **Restore on shutdown:** the first time the layout is actually touched,
+  `window-layout.mjs` captures the IDE and target windows' original
+  position/size. When Manoo stops operating — session closed, process
+  killed, `SIGINT`/`SIGTERM` — everything is put back and the HUD window
+  is closed. Geometry only, not the WM's internal "maximized" flag (wmctrl
+  doesn't expose that cheaply), but visually restores the common case
+  well. A single centralized `shutdown()` in `index.mjs` owns SIGINT/
+  SIGTERM for the whole process and calls both this and the mouse-lock
+  cleanup — deliberately not left to each module to register its own
+  signal handler, since the first one to call `process.exit()` would
+  silently stop any other same-signal listener registered after it from
+  ever running (Node quirk, not a wmctrl one). Each module's own `exit`
+  listener is unaffected by that and still fires independently, since Node
+  always runs every `exit` listener regardless of who ends the process.
+- Both split-screen and the HUD are best-effort: no X11 display, no
+  `wmctrl`, or no Firefox just means Manoo runs without them — never a
+  hard failure.
 
 ## Test / iterate locally
 

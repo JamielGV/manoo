@@ -73,13 +73,14 @@ export function emergencyUnlock() {
   forceReenableSync();
 }
 
+// Only "exit" is safe to self-register here: Node runs every "exit"
+// listener from every module regardless of who triggered it. SIGINT/
+// SIGTERM are not — the first listener to call process.exit() stops any
+// later same-signal listener from ever running, so if this module and
+// window-layout.mjs each registered their own, only one would fire on a
+// real Ctrl+C. index.mjs owns a single centralized SIGINT/SIGTERM handler
+// that calls this module's and window-layout's cleanup together instead.
 process.on("exit", forceReenableSync);
-for (const sig of ["SIGINT", "SIGTERM"]) {
-  process.on(sig, () => {
-    forceReenableSync();
-    process.exit();
-  });
-}
 
 /** Runs `fn` with the user's physical mouse/touchpad disabled for its
  * duration. Falls back to running `fn` unlocked if `xinput` isn't

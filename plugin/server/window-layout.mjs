@@ -7,12 +7,27 @@
 // (server -> claude -> the editor) and matching a PID against wmctrl's
 // window list, rather than matching on window title — titles change with
 // the open file/tab, but the process ancestry doesn't.
-import { execFile } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
 import { readFile } from "node:fs/promises";
 import { OVERLAY_WINDOW_TITLE } from "./overlay-server.mjs";
 
 const execFileAsync = promisify(execFile);
+
+// Remembered across calls so repeated splits don't get confused by some
+// unrelated window that happened to appear (observed live: a file manager
+// the user opened on their own got mistaken for "the app Manoo is
+// driving" and was tiled in instead of the real target). Once we've
+// identified the target, we stick with it as long as it still exists.
+let lastTargetWindowId = null;
+
+// Captured once, the first time the layout is actually touched, so it can
+// be put back when Manoo stops operating. Not "the maximized state" (wmctrl
+// doesn't expose that cheaply) — just the geometry, which visually restores
+// the common case well enough.
+let originalIdeGeom = null;
+let originalTarget = null; // { id, x, y, w, h }
+let overlayWindowId = null;
 
 async function wmctrl(args) {
   const { stdout } = await execFileAsync("wmctrl", args);
@@ -70,9 +85,12 @@ async function findIdeWindow(windows) {
   return null;
 }
 
-/** Best-effort guess at "the other app Manoo is driving": any top-level
- * window that isn't the IDE or Manoo's own HUD overlay, preferring the
- * most recently mapped one. */
+/** Identifies "the other app Manoo is driving". Once picked, keeps
+ * pointing at that same window (by id) across calls rather than
+ * re-guessing "the last other window" every time — otherwise some
+ * unrelated window the user opens in parallel (a file manager, another
+ * browser tab) can get mistaken for the target mid-task. Falls back to
+ * the last-mapped-window guess only when the previous target is gone. */
 function findTargetWindow(windows, ideWindow) {
   const candidates = windows.filter(
     (w) =>
@@ -80,7 +98,13 @@ function findTargetWindow(windows, ideWindow) {
       (!ideWindow || w.id !== ideWindow.id) &&
       !w.title.includes(OVERLAY_WINDOW_TITLE)
   );
-  return candidates[candidates.length - 1] || null;
+  if (lastTargetWindowId) {
+    const stillThere = candidates.find((w) => w.id === lastTargetWindowId);
+    if (stillThere) return stillThere;
+  }
+  const guess = candidates[candidates.length - 1] || null;
+  lastTargetWindowId = guess ? guess.id : null;
+  return guess;
 }
 
 async function getWorkArea() {
@@ -108,6 +132,17 @@ export async function splitScreenWithIde({ ideSide = "left" } = {}) {
     return { ok: false, reason: "ide-window-not-found" };
   }
 
+  const targetWindow = findTargetWindow(windows, ideWindow);
+
+  // Capture "how it was" the very first time, before moving anything —
+  // restoreOriginalLayout() puts this back once Manoo stops operating.
+  if (originalIdeGeom === null) {
+    originalIdeGeom = { id: ideWindow.id, x: ideWindow.x, y: ideWindow.y, w: ideWindow.w, h: ideWindow.h };
+  }
+  if (originalTarget === null && targetWindow) {
+    originalTarget = { id: targetWindow.id, x: targetWindow.x, y: targetWindow.y, w: targetWindow.w, h: targetWindow.h };
+  }
+
   const wa = await getWorkArea();
   const halfW = Math.floor(wa.w / 2);
   const leftHalf = { x: wa.x, y: wa.y, w: halfW, h: wa.h };
@@ -117,7 +152,6 @@ export async function splitScreenWithIde({ ideSide = "left" } = {}) {
 
   await placeWindow(ideWindow.id, ideGeom);
 
-  const targetWindow = findTargetWindow(windows, ideWindow);
   if (targetWindow) {
     await placeWindow(targetWindow.id, targetGeom);
   }
@@ -144,6 +178,7 @@ export async function placeOverlayWindow({
     const matches = windows.filter((w) => w.title.includes(OVERLAY_WINDOW_TITLE));
     const overlay = matches[matches.length - 1]; // most recently opened, if several
     if (overlay) {
+      overlayWindowId = overlay.id; // remembered so restoreOriginalLayout() can close it
       const wa = await getWorkArea();
       const geom = {
         x: wa.x + wa.w - width,
@@ -175,3 +210,38 @@ export async function placeOverlayWindow({
   }
   return { ok: false, reason: "overlay-window-not-found" };
 }
+
+/** Puts the IDE and target windows back where they were before Manoo's
+ * first split, and closes the HUD overlay — "the screen goes back to how
+ * it was" once Manoo stops operating. Synchronous (execFileSync) so it
+ * can run from a process "exit" handler, and safe to call even if
+ * activation never happened (nothing was captured, so this is a no-op). */
+export function restoreOriginalLayout() {
+  const restore = (id, geom) => {
+    try {
+      execFileSync("wmctrl", ["-i", "-r", id, "-b", "remove,maximized_vert,maximized_horz"], { stdio: "ignore" });
+      execFileSync("wmctrl", ["-i", "-r", id, "-e", `0,${geom.x},${geom.y},${geom.w},${geom.h}`], { stdio: "ignore" });
+    } catch {
+      // best-effort — the window may already be gone
+    }
+  };
+
+  if (originalIdeGeom) {
+    restore(originalIdeGeom.id, originalIdeGeom);
+  }
+  if (originalTarget) {
+    restore(originalTarget.id, originalTarget);
+  }
+  if (overlayWindowId) {
+    try {
+      execFileSync("wmctrl", ["-i", "-c", overlayWindowId], { stdio: "ignore" });
+    } catch {
+      // already closed, or wmctrl's -c couldn't reach it — nothing more to do
+    }
+  }
+}
+
+// Safe to self-register: Node calls every "exit" listener from every
+// module regardless of who's responsible for the process ending, unlike
+// SIGINT/SIGTERM (see the comment in mouse-lock.mjs).
+process.on("exit", restoreOriginalLayout);

@@ -21,7 +21,7 @@ import { dirname } from "node:path";
 import { loadLicense, verifyLicenseString, LICENSE_FILE } from "./license.mjs";
 import { logAction, AUDIT_LOG_FILE } from "./audit.mjs";
 import { beginManooAction, beginEscapeAction, consumeHumanInterference, onEmergencyStop } from "./input-monitor.mjs";
-import { splitScreenWithIde, placeOverlayWindow } from "./window-layout.mjs";
+import { splitScreenWithIde, placeOverlayWindow, restoreOriginalLayout } from "./window-layout.mjs";
 import { startOverlayServer } from "./overlay-server.mjs";
 import { withMouseLocked, emergencyUnlock } from "./mouse-lock.mjs";
 import { spawn } from "node:child_process";
@@ -30,30 +30,56 @@ import { spawn } from "node:child_process";
 // than waiting for the current action's own `finally` to release it.
 onEmergencyStop(() => emergencyUnlock());
 
+// A single centralized SIGINT/SIGTERM handler for the whole server —
+// deliberately not left to mouse-lock.mjs/window-layout.mjs to each
+// register their own (see the comment in mouse-lock.mjs for why that
+// would silently drop one of them). Restores the mouse and the screen
+// layout to how they were before Manoo touched anything, then exits.
+function shutdown() {
+  emergencyUnlock();
+  restoreOriginalLayout();
+  process.exit();
+}
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
+
 // nut-js defaults are tuned for animated, human-like movement. For
 // programmatic control we want it fast and deterministic.
 mouse.config.mouseSpeed = 3000;
 
-// ---- HUD overlay --------------------------------------------------------
-// A small always-on-top window with a live neon dot tracking the cursor
-// and a ticker for what's being typed, so the user can tell Manoo is
-// working without staring at the exact pixel it's touching. Best-effort:
-// no X11 display, no wmctrl, no Firefox — Manoo still works, just quiet.
+// ---- Activation, on the user's first order — not at server startup ------
+// Manoo shouldn't take over the screen (split it, pop up the HUD) the
+// moment the IDE happens to start the plugin's MCP server — only once the
+// user has actually asked Claude to do something with it, which is
+// exactly when the first Manoo tool call happens. Everything below is
+// deferred into this lazy, once-only init instead of running at the top
+// of the file.
 let pushOverlay = () => {};
-try {
-  const overlay = await startOverlayServer();
-  const overlayWindow = spawn(
-    "firefox",
-    ["--new-window", overlay.url],
-    { detached: true, stdio: "ignore" }
-  );
-  overlayWindow.unref();
-  await placeOverlayWindow();
-  const screenW = await screen.width();
-  const screenH = await screen.height();
-  pushOverlay = (event) => overlay.push({ ...event, screenW, screenH });
-} catch {
-  // Best-effort HUD — see comment above.
+let activated = false;
+
+async function ensureActivated() {
+  if (activated) return;
+  activated = true;
+  // A small always-on-top window with a live neon dot tracking the cursor
+  // and a ticker for what's being typed, so the user can tell Manoo is
+  // working without staring at the exact pixel it's touching. Best-effort:
+  // no X11 display, no wmctrl, no Firefox — Manoo still works, just quiet.
+  try {
+    const overlay = await startOverlayServer();
+    const overlayWindow = spawn(
+      "firefox",
+      ["--new-window", overlay.url],
+      { detached: true, stdio: "ignore" }
+    );
+    overlayWindow.unref();
+    await placeOverlayWindow();
+    const screenW = await screen.width();
+    const screenH = await screen.height();
+    pushOverlay = (event) => overlay.push({ ...event, screenW, screenH });
+  } catch {
+    // Best-effort HUD — see comment above.
+  }
+  await splitScreenWithIde().catch(() => {});
 }
 
 // ---- Licensing / free-tier quota -------------------------------------
@@ -91,6 +117,7 @@ function handoffMessage({ type, detail }) {
 /** Wraps an action tool handler with human-handoff, free-tier quota, and Pro audit log. */
 function gated(name, handler) {
   return async (args) => {
+    await ensureActivated();
     const interference = consumeHumanInterference();
     if (interference) {
       return handoffMessage(interference);
@@ -197,7 +224,10 @@ server.registerTool(
       "Capture the current screen and return it as an image. Use this before deciding where to click or what to type, and again afterward to verify the result.",
     inputSchema: {},
   },
-  async () => imageResult(await captureScreenshotBase64())
+  async () => {
+    await ensureActivated();
+    return imageResult(await captureScreenshotBase64());
+  }
 );
 
 server.registerTool(
@@ -208,6 +238,7 @@ server.registerTool(
     inputSchema: {},
   },
   async () => {
+    await ensureActivated();
     const p = await mouse.getPosition();
     return textResult(`x=${p.x}, y=${p.y}`);
   }
@@ -225,6 +256,7 @@ server.registerTool(
     inputSchema: { ide_side: z.enum(["left", "right"]).optional().default("left") },
   },
   async ({ ide_side }) => {
+    await ensureActivated();
     const result = await splitScreenWithIde({ ideSide: ide_side });
     if (!result.ok) {
       return textResult(`Could not split the screen (${result.reason}).`);
@@ -428,11 +460,6 @@ server.registerTool(
     return textResult(`Pressed ${combo}`);
   })
 );
-
-// Split the screen right away so the IDE stays visible for the whole
-// session, not just once Manoo starts acting. Best-effort: a failure here
-// (no window manager, headless, wmctrl missing) shouldn't stop the server.
-await splitScreenWithIde().catch(() => {});
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
