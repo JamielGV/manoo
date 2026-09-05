@@ -321,7 +321,7 @@
           <li data-i18n="proLi2">Local audit log of every action</li>
           <li data-i18n="proLi3">Priority support</li>
         </ul>
-        <a class="cta" id="pro-cta" href="https://buy.stripe.com/test_8x25kE6vF5eI7SbfjW1oI01" target="_blank" rel="noopener" data-i18n="proCta">Get Pro</a>
+        <a class="cta" id="pro-cta" href="https://buy.stripe.com/8x25kE6vF5eI7SbfjW1oI01" target="_blank" rel="noopener" data-i18n="proCta">Get Pro</a>
       </div>
     </div>
   </main>
@@ -372,14 +372,12 @@
     // Annual is the discounted option ($49/yr ≈ $4.08/mo) vs paying
     // monthly ($6/mo ≈ $72/yr) — same tradeoff most subscription tools
     // use to reward committing upfront, without requiring it.
-    // Real Stripe Payment Links (automation/create-payment-link.mjs) — as of
-    // this writing these are TEST-mode links (Stripe account not yet
-    // switched to live), so no real charges happen through them yet. Swap
-    // for the live-mode URLs (same script, real STRIPE_SECRET_KEY) before
-    // announcing this publicly as a real launch.
+    // Real, LIVE-mode Stripe Payment Links (automation/create-payment-link.mjs,
+    // run with the account's real sk_live_ key) — real charges go through
+    // these to the account's actual bank account (Banco Azteca via SPEI).
     var BILLING = {
-      year: { amount: '$49', checkoutUrl: 'https://buy.stripe.com/test_8x25kE6vF5eI7SbfjW1oI01' },
-      month: { amount: '$6', checkoutUrl: 'https://buy.stripe.com/test_5kQeVecU336Ab4nb3G1oI02' }
+      year: { amount: '$49', checkoutUrl: 'https://buy.stripe.com/8x25kE6vF5eI7SbfjW1oI01' },
+      month: { amount: '$6', checkoutUrl: 'https://buy.stripe.com/14A28sbPZdLe2xR3Be1oI00' }
     };
 
     var currentLang = 'en';
