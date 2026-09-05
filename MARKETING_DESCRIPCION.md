@@ -33,8 +33,8 @@ Mientras trabaja, la pantalla se divide para que sigas viendo la
 conversación con Claude, y el cursor brilla en neón para que sepas que es
 Manoo quien se mueve, no tú. Tú siempre tienes el control — si tocas el
 mouse o el teclado, Manoo se detiene al instante. Es gratis para probarlo
-(25 acciones por sesión); si te sirve, Pro son $49 USD al año, sin
-límite.
+(25 acciones por sesión); si te sirve, Pro son $49 USD al año (o $6 USD
+al mes si prefieres pagar mes a mes), sin límite.
 
 ### Bullets de venta (para la página o para un post)
 
@@ -119,7 +119,8 @@ like you would. While it works, the screen splits so you keep seeing
 your conversation with Claude, and the cursor glows neon so you know
 it's Manoo moving, not you. You're always in control — touch the mouse
 or keyboard and Manoo stops instantly. Free to try (25 actions per
-session); if it's useful, Pro is $49 USD/year, unlimited.
+session); if it's useful, Pro is $49 USD/year (or $6 USD/month if you'd
+rather pay monthly), unlimited.
 
 ### Sales bullets (for the page or a post)
 

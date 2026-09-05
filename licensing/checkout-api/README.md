@@ -14,19 +14,26 @@ and account creation, none of which Claude/an agent can do for you.
    (Jamiel García Velázquez / persona física — Lemon Squeezy acts as
    "merchant of record," so they handle VAT/sales tax globally; you don't
    need a registered company for this).
-2. Create a product: "Manoo Pro", **$49.00 USD**, recurring **yearly**
-   (or one-time if you'd rather not deal with subscription renewals/
-   cancellations yet — either works, `mint-license.mjs`'s `--days 365`
-   logic doesn't care which).
+2. Create **two** products (or one product with two variants):
+   - "Manoo Pro (Annual)" — **$49.00 USD**, recurring yearly.
+   - "Manoo Pro (Monthly)" — **$6.00 USD**, recurring monthly.
+   Either recurring or one-time both work — `mint-license.mjs`'s
+   `--days` logic doesn't care which, it just mints a license valid for
+   that many days. `api/webhook.mjs` tells the two apart by checking
+   whether the product/variant name contains "month" (falls back to the
+   365-day annual length if the name doesn't match anything recognized),
+   so name them so that only the monthly one contains "month" somewhere.
 3. Do **not** enable Lemon Squeezy's own "License Keys" feature on the
    product — Manoo's licenses are signed with your own Ed25519 key and
    verified fully offline (no telemetry, no server round-trip at
    activation time); using Lemon Squeezy's built-in license system
    instead would mean every activation calls out to their API, which
    contradicts that design.
-4. Copy the product's checkout URL — you'll paste it into
-   `site/index.html`'s "Get Pro" button (replacing the current `mailto:`
-   link) once this is deployed.
+4. Copy **both** checkout URLs — you'll paste them into `site/index.html`'s
+   billing toggle (the annual/monthly switch on the Pro card already
+   there; it currently just changes the displayed price and the `mailto:`
+   subject line — swap `BILLING.year`/`BILLING.month`'s use of `mailto:`
+   for the real checkout URLs once this is deployed).
 
 ## 2. Deploy this folder to Vercel
 

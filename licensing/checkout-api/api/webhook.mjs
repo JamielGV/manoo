@@ -117,9 +117,23 @@ export default async function handler(req, res) {
     return;
   }
 
+  // Manoo Pro sells as two separate Lemon Squeezy products/variants
+  // (monthly $6, annual $49) — both mint the same "pro" plan, just for a
+  // different number of days. Matched by name rather than a product ID
+  // so this doesn't need updating if the product is ever recreated;
+  // defaults to the annual length if the name is unrecognized, since a
+  // license that's valid too long is a much smaller problem than one
+  // that's too short.
+  const itemName = (
+    attrs?.first_order_item?.product_name ||
+    attrs?.first_order_item?.variant_name ||
+    ""
+  ).toLowerCase();
+  const days = itemName.includes("month") ? 30 : 365;
+
   try {
     const { licenseKey, payload } = mintLicense(
-      { email, plan: "pro", days: 365 },
+      { email, plan: "pro", days },
       process.env.MANOO_PRIVATE_KEY
     );
     await sendLicenseEmail({ to: email, licenseKey, expiresAt: payload.expiresAt });

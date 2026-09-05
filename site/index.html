@@ -224,6 +224,28 @@
     background: var(--accent);
     color: #1a0f04;
   }
+  .billing-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 0.4rem 0 0.6rem;
+  }
+  .billing-toggle button {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    padding: 0.3rem 0.7rem;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .billing-toggle button[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
 </style>
 </head>
 <body>
@@ -289,13 +311,17 @@
       </div>
       <div class="plan pro">
         <h3 data-i18n="proTitle">Pro</h3>
-        <div class="price">$49 <span>USD / year</span></div>
+        <div class="billing-toggle" role="group" aria-label="Billing period">
+          <button type="button" data-billing="year" data-i18n="billingYear">Annual</button>
+          <button type="button" data-billing="month" data-i18n="billingMonth">Monthly</button>
+        </div>
+        <div class="price"><span id="pro-price-amount">$49</span> <span id="pro-price-unit">USD / year</span></div>
         <ul>
           <li data-i18n="proLi1">Everything in Free, unlimited actions</li>
           <li data-i18n="proLi2">Local audit log of every action</li>
           <li data-i18n="proLi3">Priority support</li>
         </ul>
-        <a class="cta" href="mailto:jamiel.garcia.velazquez@gmail.com?subject=Quiero%20Manoo%20Pro" data-i18n="proCta">Get Pro</a>
+        <a class="cta" id="pro-cta" href="mailto:jamiel.garcia.velazquez@gmail.com?subject=Quiero%20Manoo%20Pro%20(anual)" data-i18n="proCta">Get Pro</a>
       </div>
     </div>
   </main>
@@ -335,11 +361,38 @@
       proLi2: { en: 'Local audit log of every action', es: 'Registro de auditoría local de cada acción' },
       proLi3: { en: 'Priority support', es: 'Soporte prioritario' },
       proCta: { en: 'Get Pro', es: 'Obtener Pro' },
+      billingYear: { en: 'Annual', es: 'Anual' },
+      billingMonth: { en: 'Monthly', es: 'Mensual' },
+      proUnitYear: { en: 'USD / year', es: 'USD / año' },
+      proUnitMonth: { en: 'USD / month', es: 'USD / mes' },
       footer: { en: 'Manoo by <a href="#">Corporación Jamiel</a>', es: 'Manoo por <a href="#">Corporación Jamiel</a>' },
       emailCopied: { en: 'Email copied: ', es: 'Correo copiado: ' }
     };
 
+    // Annual is the discounted option ($49/yr ≈ $4.08/mo) vs paying
+    // monthly ($6/mo ≈ $72/yr) — same tradeoff most subscription tools
+    // use to reward committing upfront, without requiring it.
+    var BILLING = {
+      year: { amount: '$49', mailSubject: 'Quiero Manoo Pro (anual)' },
+      month: { amount: '$6', mailSubject: 'Quiero Manoo Pro (mensual)' }
+    };
+
     var currentLang = 'en';
+    var currentBilling = 'year';
+
+    function applyBilling(period) {
+      currentBilling = period;
+      var info = BILLING[period];
+      document.getElementById('pro-price-amount').textContent = info.amount;
+      document.getElementById('pro-price-unit').textContent =
+        STRINGS[period === 'year' ? 'proUnitYear' : 'proUnitMonth'][currentLang];
+      var cta = document.getElementById('pro-cta');
+      var email = cta.href.replace(/^mailto:/, '').split('?')[0];
+      cta.href = 'mailto:' + email + '?subject=' + encodeURIComponent(info.mailSubject);
+      document.querySelectorAll('.billing-toggle button').forEach(function (btn) {
+        btn.setAttribute('aria-pressed', String(btn.getAttribute('data-billing') === period));
+      });
+    }
 
     function applyLang(lang) {
       currentLang = lang;
@@ -351,6 +404,7 @@
       document.querySelectorAll('#lang-toggle button').forEach(function (btn) {
         btn.setAttribute('aria-pressed', String(btn.getAttribute('data-lang') === lang));
       });
+      applyBilling(currentBilling); // refresh the unit label in the new language
     }
 
     (function () {
@@ -364,6 +418,11 @@
           var lang = btn.getAttribute('data-lang');
           applyLang(lang);
           try { localStorage.setItem('manoo-lang', lang); } catch (e) {}
+        });
+      });
+      document.querySelectorAll('.billing-toggle button').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          applyBilling(btn.getAttribute('data-billing'));
         });
       });
     })();
