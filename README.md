@@ -26,13 +26,11 @@ machine.
   - `server/audit.mjs` — Pro-only local audit log
     (`~/.local/share/manoo/audit.log`)
   - `server/window-layout.mjs` — tiles the IDE window and the app Manoo is
-    driving into left/right halves via `wmctrl`, and pins the HUD overlay
-    window into the bottom-right corner. Finds the IDE window by walking
-    this process's own parent chain (not by title, which changes)
-  - `server/overlay-server.mjs` — local HTTP+SSE server behind the neon HUD
-    (see "Screen layout & HUD" below)
+    driving into left/right halves via `wmctrl`, and un-splits/maximizes
+    the IDE again once idle. Finds the IDE window by walking this
+    process's own parent chain (not by title, which changes)
   - `server/cursor-theme.mjs` — swaps the real system cursor for a
-    neon-glow version while Manoo is active (see "Screen layout & HUD"
+    neon-glow version while Manoo is active (see "Screen layout & cursor"
     below); `server/assets/gen-cursor.py` + `server/assets/left_ptr` are
     the one-time generator and its committed output
   - `server/mouse-lock.mjs` — disables the user's physical mouse/touchpad
@@ -155,7 +153,7 @@ waiting for the current action's own cleanup.
   end-to-end visual not independently verifiable by Claude):** the real
   system pointer is swapped for a neon-glow hand — not a separate window,
   the actual cursor — for as long as Manoo is actively working, reverting
-  to the user's normal cursor `IDLE_MS` (15000ms) after it goes idle
+  to the user's normal cursor `IDLE_MS` (60000ms) after it goes idle
   rather than staying neon for the whole session. `index.mjs`'s
   `markProcessing()` re-applies it and re-arms the idle timer on every
   action, so a fast burst of actions reads as one continuous stretch

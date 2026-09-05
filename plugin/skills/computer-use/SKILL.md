@@ -42,7 +42,7 @@ driving" rather than re-guessing every time, so an unrelated window the
 user opens on their own in parallel (a file manager, another browser tab)
 doesn't get mistaken for the target and pulled into the split.
 
-The split itself is also temporary within a session: after ~15 seconds of
+The split itself is also temporary within a session: after ~60 seconds of
 no further action tool calls, the IDE fills back to the full screen, gets
 focus, and its chat scrolls to the latest message — then splits again the
 next time you act. If a resize doesn't seem to take (rare, but seen live
@@ -60,7 +60,7 @@ Manoo touched it.
 The actual system pointer — not a separate window, the real cursor itself
 — swaps to a neon-glow hand (matching Manoo's own icon) for as long as
 Manoo is actively working, and reverts to the user's normal cursor about
-15 seconds after it goes quiet. You never call anything for this; it's
+60 seconds after it goes quiet. You never call anything for this; it's
 tied to every action tool automatically. A burst of several actions in a
 row reads as one continuous "processing" stretch rather than flickering
 the cursor on and off between each one. Best-effort: needs `xsetroot` and
