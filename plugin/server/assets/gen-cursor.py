@@ -103,8 +103,27 @@ _MASK = make_mask()
 _MESH = make_mesh_fill()
 
 
+def make_dark_halo():
+    """A slightly-larger-than-the-hand dark silhouette, sitting behind
+    everything else. Without this, the cursor all but disappears over a
+    light/white background (most real pages and apps) — the mesh fill
+    reads as a dull grey blob and the cyan glow barely shows at all over
+    white. A dark halo gives the shape real contrast on ANY background,
+    the same trick game/UI icons use, while the neon glow+outline on top
+    still carry the "neon" look on dark backgrounds."""
+    dilate_size = max(3, round(4 * DS)) | 1  # must be odd for MaxFilter
+    dilated_alpha = _MASK.split()[3].filter(ImageFilter.MaxFilter(dilate_size))
+    halo = Image.new("RGBA", (W, H), (6, 10, 16, 0))
+    halo.putalpha(dilated_alpha.point(lambda v: int(v * 225 / 255)))
+    return halo.filter(ImageFilter.GaussianBlur(SS * 0.6))
+
+
+_DARK_HALO = make_dark_halo()
+
+
 def make_frame(glow_blur, glow_alpha):
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    img.alpha_composite(_DARK_HALO)
 
     # Glow: blurred solid silhouette underneath everything — this is what
     # pulses frame to frame, like a heartbeat behind the hand. Built at
