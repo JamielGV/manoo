@@ -47,29 +47,12 @@ process.on("SIGTERM", shutdown);
 // programmatic control we want it fast and deterministic.
 mouse.config.mouseSpeed = 3000;
 
-// ---- Activation, on the user's first order — not at server startup ------
-// Manoo shouldn't take over the screen (split it, change the cursor) the
-// moment the IDE happens to start the plugin's MCP server — only once the
-// user has actually asked Claude to do something with it, which is
-// exactly when the first Manoo tool call happens. Everything below is
-// deferred into this lazy, once-only init instead of running at the top
-// of the file.
-let activated = false;
-
-async function ensureActivated() {
-  if (activated) return;
-  activated = true;
-  // There used to also be a small corner HUD window here (first Firefox,
-  // then a native GTK window after a real user pointed out an end user
-  // should never see a browser window with an address bar) — removed
-  // entirely once the pulsing neon cursor shipped: showing "Manoo is
-  // working" is now the cursor's job, and a second indicator was
-  // redundant per the same user's feedback. Nothing else to do here —
-  // the split and the cursor both wait for the first real action instead
-  // of firing on activation (see markProcessing() below).
-}
-
 // ---- Split screen + neon cursor, only while actually processing --------
+// Manoo shouldn't take over the screen (split it, change the cursor) the
+// moment the IDE happens to start the plugin's MCP server, or even the
+// moment the user asks it to look at something — only once it's actually
+// about to act (an action tool call, not a read-only one), which is
+// exactly what markProcessing() below is called from.
 // Both only show up while Manoo is actively working — split screen so the
 // IDE stays visible while it acts, neon cursor so it's obvious it's Manoo
 // moving the mouse and not the user — and both revert once it goes idle
@@ -144,7 +127,6 @@ function handoffMessage({ type, detail }) {
 /** Wraps an action tool handler with human-handoff, free-tier quota, and Pro audit log. */
 function gated(name, handler) {
   return async (args) => {
-    await ensureActivated();
     await markProcessing();
     const interference = consumeHumanInterference();
     if (interference) {
@@ -248,10 +230,7 @@ server.registerTool(
       "Capture the current screen and return it as an image. Use this before deciding where to click or what to type, and again afterward to verify the result.",
     inputSchema: {},
   },
-  async () => {
-    await ensureActivated();
-    return imageResult(await captureScreenshotBase64());
-  }
+  async () => imageResult(await captureScreenshotBase64())
 );
 
 server.registerTool(
@@ -262,7 +241,6 @@ server.registerTool(
     inputSchema: {},
   },
   async () => {
-    await ensureActivated();
     const p = await mouse.getPosition();
     return textResult(`x=${p.x}, y=${p.y}`);
   }
@@ -275,12 +253,12 @@ server.registerTool(
     description:
       "Tile the screen so the Claude Code / IDE window and the app Manoo is " +
       "driving sit side by side, so the user can watch what's happening in " +
-      "both at once. Runs automatically when Manoo starts up; call this " +
-      "again after opening a new target app window, or if the layout drifts.",
+      "both at once. Runs automatically before every action tool call; call " +
+      "this yourself after opening a new target app window, or if the " +
+      "layout drifts.",
     inputSchema: { ide_side: z.enum(["left", "right"]).optional().default("left") },
   },
   async ({ ide_side }) => {
-    await ensureActivated();
     const result = await splitScreenWithIde({ ideSide: ide_side });
     if (!result.ok) {
       return textResult(`Could not split the screen (${result.reason}).`);

@@ -14,30 +14,30 @@ You have direct control of this machine's screen, mouse, and keyboard via the
 Everything runs locally on this machine. Nothing is sent anywhere else
 (Pro's audit log is also local-only).
 
-## Manoo activates on the first order, not when the server starts
+## Split screen and the neon cursor only show up when Manoo is about to act
 
-Nothing visible happens just because the MCP server process is running —
-no split screen, no HUD — until the first Manoo tool call actually
-happens (any of them, `screenshot` included). That first call is, by
-definition, the user having asked Claude to do something with the screen,
-which is when activation should happen and not a moment sooner. You don't
-need to do anything to trigger this — it's automatic on your first tool
-call — just know that "Manoo is installed" and "Manoo is active" are
-different things, and the gap between them is intentional.
+Nothing visible happens just because the MCP server process is running,
+or even because you took a `screenshot` or checked `cursor_position` —
+those are read-only and never touch the screen layout or the cursor.
+Split screen and the neon cursor only appear right before an action tool
+(`mouse_move`, a click, `scroll`, `type`, `key`) actually runs, and revert
+on their own once Manoo goes quiet for about a minute (see below). You
+don't need to do anything to trigger this — it's automatic on every
+action tool call.
 
-## The screen stays split with the IDE
+## The screen stays split with the IDE while Manoo acts
 
-Once activated, Manoo tiles the screen so the Claude Code / IDE window
-stays visible on one side while it drives the other app — the user should
-never lose sight of the conversation while Manoo is acting.
+Manoo tiles the screen so the Claude Code / IDE window stays visible on
+one side while it drives the other app — the user should never lose
+sight of the conversation while Manoo is acting.
 
 If you open a new target app window mid-task (e.g. you launched it via a
 terminal command rather than clicking it into existence), call
 `split_screen` again afterward so that window gets tiled in too. In
 practice you rarely need to: the split is re-asserted before every single
-action tool call, not just once at activation, so the IDE stays fully
-visible even if something (the user, the app itself) moved or maximized a
-window in between. It also remembers which window is "the app Manoo is
+action tool call, so the IDE stays fully visible even if something (the
+user, the app itself) moved or maximized a window in between. It also
+remembers which window is "the app Manoo is
 driving" rather than re-guessing every time, so an unrelated window the
 user opens on their own in parallel (a file manager, another browser tab)
 doesn't get mistaken for the target and pulled into the split.

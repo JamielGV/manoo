@@ -132,14 +132,15 @@ waiting for the current action's own cleanup.
 
 ## Screen layout & cursor (implemented, verified)
 
-- **Lazy activation:** none of this runs when the MCP server process
-  starts. `index.mjs`'s `ensureActivated()` fires once, on the first
-  actual Manoo tool call (`screenshot` included) — the moment the user has
-  asked Claude to do something with the screen, not a moment sooner or
-  later. Installing the plugin and Claude Code launching its process
-  should never by themselves pop up a window or move anything.
-- **Split screen with the IDE:** on activation — and before every single
-  action after that, not just once — `window-layout.mjs` tiles the
+- **Lazy, action-gated activation:** none of this runs when the MCP
+  server process starts, or even on read-only tool calls (`screenshot`,
+  `cursor_position`). `index.mjs`'s `markProcessing()` fires on every
+  action tool call instead (`mouse_move`, clicks, `scroll`, `type`,
+  `key`) — installing the plugin, Claude Code launching its process, or
+  Claude just looking at the screen should never by themselves pop up a
+  window, move anything, or change the cursor.
+- **Split screen with the IDE:** before every single action —
+  `window-layout.mjs` tiles the
   Claude Code / IDE window and whatever app Manoo is driving into left/right
   halves of the work area (via `wmctrl`), so the user never loses sight of
   the conversation while Manoo acts. The `split_screen` tool re-runs this on
