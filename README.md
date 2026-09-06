@@ -26,7 +26,9 @@ Antigravity behaves, not just a generic "any editor" assumption.
     `@nut-tree-fork/nut-js`), exposing: `screenshot`, `cursor_position`,
     `mouse_move`, `left_click`, `right_click`, `middle_click`,
     `double_click`, `left_click_drag`, `scroll`, `type`, `key`,
-    `split_screen`, `license_status`, `license_activate`
+    `split_screen`, `list_windows`, `focus_window`, `read_clipboard`,
+    `paste_text`, `hold_screen`, `release_screen_hold`, `license_status`,
+    `license_activate`
   - `server/license.mjs` — verifies Ed25519-signed license keys (public key
     only; cannot mint new licenses)
   - `server/audit.mjs` — Pro-only local audit log
@@ -321,6 +323,34 @@ waiting for the current action's own cleanup.
   that check does. `release_screen_hold` clears it once Claude resumes
   or the user's done, since a hold is meant to be a deliberate pin, not
   a background trigger Manoo infers.
+- **`list_windows` / `focus_window`, for working with more than one
+  non-IDE window at once.** `split_screen` only ever tracks the IDE plus
+  one sticky "target" window — found live that with a second window open
+  alongside it (a terminal next to a browser), the split could only ever
+  show one of them, and typing into the one NOT currently shown kept
+  landing in the wrong place: the next action's `split_screen` call
+  re-asserted the existing pair and brought the *other* window back
+  forward before the keystrokes arrived. `list_windows` returns every
+  open window's id and title; `focus_window` raises and focuses one by
+  id directly, independent of the split state, so a specific window can
+  be targeted on demand rather than only whichever one the split
+  happens to be showing.
+- **`read_clipboard` / `paste_text`, since `type` can silently mis-type
+  certain characters.** Found live, repeatedly, typing real URLs into
+  real address bars and form fields: `type` simulates individual
+  keystrokes via nut-js, and on this system `/` came out as `7` and `:`
+  came out as `.` — consistently, silently, no error — almost certainly
+  a keyboard-layout mismatch between what nut-js assumes and this
+  system's actual layout. A URL or path typed this way can come out
+  wrong with nothing to indicate it happened. `paste_text` sets the
+  system clipboard (via nut-js's `clipboard` module) to the given text
+  and sends Ctrl+V, which bypasses keystroke simulation entirely and
+  always lands the exact text given — confirmed live fixing exactly this
+  failure when typing a Cloudflare Worker URL into Stripe's webhook
+  config. `read_clipboard` reads the clipboard back, e.g. after sending
+  Ctrl+C somewhere. Prefer `paste_text` over `type` for anything
+  structural (URLs, paths, commands); `type` is still fine for plain
+  prose where a wrong character is low-stakes and easy to spot.
 - **Restore on shutdown:** the first time the layout is actually touched,
   `window-layout.mjs` captures the IDE and target windows' original
   position/size, and `cursor-theme.mjs` captures the original cursor

@@ -8,8 +8,9 @@ description: Use when the user asks Claude to interact with the screen directly 
 You have direct control of this machine's screen, mouse, and keyboard via the
 `manoo` MCP tools: `screenshot`, `cursor_position`, `mouse_move`,
 `left_click`, `right_click`, `middle_click`, `double_click`,
-`left_click_drag`, `scroll`, `type`, `key`, `split_screen`, plus
-`license_status` and `license_activate`.
+`left_click_drag`, `scroll`, `type`, `key`, `split_screen`, `list_windows`,
+`focus_window`, `read_clipboard`, `paste_text`, `hold_screen`,
+`release_screen_hold`, plus `license_status` and `license_activate`.
 
 Everything runs locally on this machine. Nothing is sent anywhere else
 (Pro's audit log is also local-only).
@@ -78,6 +79,32 @@ plain "wait for real activity" check can't help with that gap — there's
 no activity yet for it to notice). Call `release_screen_hold` once
 they're done, or once you resume acting yourself, so normal idle
 behavior resumes instead of holding the split indefinitely.
+
+## Working with more than one non-IDE window (e.g. a terminal alongside a browser)
+
+`split_screen` only ever shows the IDE plus **one** sticky target window.
+If a terminal, a second app, or anything else you need is open at the same
+time, call `list_windows` to see every open window (id + title), then
+`focus_window` with the id you want — this raises and focuses it directly,
+independent of whatever the split is currently showing. Found live: typing
+into a terminal that wasn't the split's current target kept landing in the
+wrong window, because the next action re-asserted the split and brought
+the *other* window back forward before the keystrokes arrived — explicitly
+focusing the terminal first avoids that.
+
+## Prefer `paste_text` over `type` for URLs, paths, and anything with `:` or `/`
+
+Found live, repeatedly: `type` simulates individual keystrokes, and on
+this system it mis-types `/` and `:` specifically (they came out as `7`
+and `.`) — silently, with no error, so a URL or file path typed this way
+can come out wrong without any indication something went sideways.
+`paste_text` sets the clipboard and pastes (Ctrl+V) instead, which
+sidesteps keystroke simulation entirely and always lands exactly the text
+given. Use `type` for plain prose/search queries where getting it wrong
+is low-stakes and easy to notice; use `paste_text` for anything
+structural — URLs, paths, commands — where a silently mangled character
+is easy to miss and breaks the whole value. `read_clipboard` is also
+available if you need to see what a Ctrl+C somewhere just copied.
 
 ## The real cursor glows neon only while actually processing
 

@@ -9,6 +9,7 @@ import {
   mouse,
   keyboard,
   screen,
+  clipboard,
   Point,
   Button,
   Key,
@@ -21,7 +22,7 @@ import { dirname } from "node:path";
 import { loadLicense, verifyLicenseString, LICENSE_FILE } from "./license.mjs";
 import { logAction, AUDIT_LOG_FILE } from "./audit.mjs";
 import { beginManooAction, beginEscapeAction, consumeHumanInterference, onEmergencyStop, msSinceLastHumanActivity } from "./input-monitor.mjs";
-import { splitScreenWithIde, maximizeIdeWindow, minimizeTargetWindow, focusIdeWindow, restoreOriginalLayout } from "./window-layout.mjs";
+import { splitScreenWithIde, maximizeIdeWindow, minimizeTargetWindow, focusIdeWindow, restoreOriginalLayout, listAllWindows, focusWindowById } from "./window-layout.mjs";
 import { withMouseLocked, emergencyUnlock } from "./mouse-lock.mjs";
 import { applyNeonCursor, restoreCursorTheme } from "./cursor-theme.mjs";
 
@@ -350,6 +351,76 @@ server.registerTool(
       (result.target ? `, "${result.target}" on the other side.` : ", nothing else to place on the other side.")
     );
   }
+);
+
+server.registerTool(
+  "list_windows",
+  {
+    title: "List open windows",
+    description:
+      "List every open application window on this desktop (id and title) — " +
+      "not just the IDE and whatever split_screen currently targets. Use " +
+      "this to find a specific window (a terminal, a particular app) you " +
+      "want to act on with focus_window, when it isn't the window already " +
+      "showing in the split.",
+    inputSchema: {},
+  },
+  async () => {
+    const windows = await listAllWindows();
+    if (windows.length === 0) return textResult("No windows found.");
+    return textResult(windows.map((w) => `${w.id}  ${w.title}`).join("\n"));
+  }
+);
+
+server.registerTool(
+  "focus_window",
+  {
+    title: "Focus a specific window",
+    description:
+      "Bring a specific window to the front and give it keyboard focus, by " +
+      "its id (from list_windows) — regardless of whether it's part of the " +
+      "current split. Use this before typing/clicking into a window that " +
+      "isn't the one currently shown, e.g. a terminal running alongside a " +
+      "browser.",
+    inputSchema: { window_id: z.string() },
+  },
+  async ({ window_id }) => {
+    await focusWindowById(window_id);
+    return textResult(`Focused window ${window_id}`);
+  }
+);
+
+server.registerTool(
+  "read_clipboard",
+  {
+    title: "Read the clipboard",
+    description: "Read the current system clipboard's text content.",
+    inputSchema: {},
+  },
+  async () => textResult(await clipboard.getContent())
+);
+
+server.registerTool(
+  "paste_text",
+  {
+    title: "Paste text via the clipboard",
+    description:
+      "Sets the system clipboard to the given text, then pastes it " +
+      "(Ctrl+V) at the current cursor/focus position. Prefer this over " +
+      "the `type` tool for URLs, file paths, or anything with colons or " +
+      "slashes — `type` simulates keystrokes and can mis-type those " +
+      "specific characters depending on the system's keyboard layout; " +
+      "pasting bypasses that entirely. Never use this for passwords or " +
+      "other credentials.",
+    inputSchema: { text: z.string() },
+  },
+  gated("paste_text", async ({ text }) => {
+    beginManooAction(300);
+    await clipboard.setContent(text);
+    await keyboard.pressKey(Key.LeftControl, Key.V);
+    await keyboard.releaseKey(Key.LeftControl, Key.V);
+    return textResult(`Pasted ${text.length} characters via clipboard`);
+  })
 );
 
 server.registerTool(

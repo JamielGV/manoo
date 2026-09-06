@@ -298,3 +298,25 @@ export async function focusIdeWindow() {
     // best-effort — the window may be gone
   }
 }
+
+/** Lists every open window (id, title, pid) — not just the IDE/target
+ * pair splitScreenWithIde() tracks. Found live: with more than one
+ * non-IDE window open (a browser AND a terminal), the sticky single-
+ * target tracking used for the split can only ever point at one of
+ * them, so a terminal could never be reliably brought forward on its
+ * own — this (with focusWindowById()) lets Claude pick a specific
+ * window by id instead of being limited to "the split's other window". */
+export async function listAllWindows() {
+  const windows = await listWindows();
+  return windows
+    .filter((w) => w.desktop >= 0)
+    .map((w) => ({ id: w.id, title: w.title, pid: w.pid }));
+}
+
+/** Focuses an arbitrary window by id (from listAllWindows()), regardless
+ * of whether it's the IDE or the split's current target — e.g. a
+ * terminal that isn't part of the split at all. Does not touch the
+ * split/layout state, just raises and focuses the requested window. */
+export async function focusWindowById(id) {
+  await wmctrl(["-i", "-a", id]);
+}

@@ -6,7 +6,7 @@ compatibility_date = "2026-01-01"
 # then paste the id it prints here.
 [[kv_namespaces]]
 binding = "PROCESSED_PAYMENTS"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "9ab89ab46a5245a8adc257f81df2a4dc"
 
 # Secrets (set with `wrangler secret put <NAME>` — never put real values here):
 #   STRIPE_SECRET_KEY      — Stripe secret key (sk_live_...)

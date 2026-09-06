@@ -1,3 +1,4 @@
 node_modules/
 licensing/private-key.pem
 plugin/server/node_modules/
+automation/worker/.wrangler/
