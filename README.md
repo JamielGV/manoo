@@ -7,11 +7,17 @@ MCP server, so it can act directly on screen instead of only describing
 steps. Linux/X11 only for now. Everything runs locally — nothing leaves the
 machine.
 
-Developed and tested against **Antigravity** (the Electron/GTK-based IDE
-this session runs in) — the window-finding logic (`window-layout.mjs`
-walks process ancestry, not window titles) and the cursor theme switch
-(`cursor-theme.mjs`, see below) both explicitly account for how
-Antigravity behaves, not just a generic "any editor" assumption.
+Works generally with **any** app hosting Claude Code — VSCode, a plain
+terminal, JetBrains, Antigravity, whatever — not scoped to one specific
+IDE. `window-layout.mjs` finds "the IDE window" by walking this
+process's own parent chain and matching a PID against the window list,
+not by title or by assuming a specific host app, so it works the same
+way regardless of which one is actually running Claude Code. Most of
+this session's own development and testing happened to use
+**Antigravity** (an Electron/GTK-based IDE) as that host, which is why
+some notes below mention it specifically — those are live findings about
+GTK/XSETTINGS behavior common to that whole class of app, not a
+limitation to that one IDE.
 
 ## Layout
 
@@ -208,8 +214,9 @@ waiting for the current action's own cleanup.
     what Firefox and the bare desktop respect.
   - `xfconf-query -c xsettings -p /Gtk/CursorThemeName -s ...` writes
     XFCE's D-Bus-backed settings store — this is what GTK apps read,
-    **confirmed live: Antigravity, the Electron/GTK-based IDE this
-    plugin is meant to run inside.**
+    **confirmed live against Antigravity** (the Electron/GTK-based IDE
+    used for most of this session's testing — the same fix applies to
+    any GTK-based host app, not just that one).
 
   Found live, from a real user report ("I still see the neon cursor and
   I'm in Claude/Antigravity"), that an *earlier* version of this file
