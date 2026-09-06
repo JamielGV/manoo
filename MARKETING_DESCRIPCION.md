@@ -52,6 +52,12 @@ al mes si prefieres pagar mes a mes), sin límite.
   fácil de entender que leer comandos de terminal — aprendes viendo qué
   hace exactamente, no solo leyendo texto. Menos intimidante para alguien
   que recién empieza.
+- **Cualquiera que le pida algo a Claude, reciba la respuesta con los
+  pasos a seguir, y le cueste trabajo seguirlos él mismo** — no
+  necesariamente por falta de conocimiento técnico, simplemente porque
+  ejecutar clic por clic lo que Claude ya explicó es tedioso o propenso a
+  error. Manoo elimina ese paso intermedio: en vez de leer instrucciones
+  y ejecutarlas tú, Claude las ejecuta directamente.
 - Freelancers y agencias que repiten la misma tarea manual en varios
   proyectos/clientes.
 - Cualquiera que use Claude Code y se frustre describiendo clics en vez de
@@ -138,6 +144,12 @@ rather pay monthly), unlimited.
   than reading terminal commands — you learn by seeing exactly what it
   does, not just reading text. Less intimidating for someone just
   starting out.
+- **Anyone who asks Claude for help, gets back the steps to follow, and
+  struggles to actually execute them** — not necessarily from lack of
+  technical knowledge, just because doing click-by-click what Claude
+  already explained is tedious or error-prone. Manoo removes that middle
+  step: instead of reading instructions and carrying them out yourself,
+  Claude carries them out directly.
 - Freelancers and agencies repeating the same manual task across
   multiple projects/clients.
 - Anyone using Claude Code who gets frustrated describing clicks instead
