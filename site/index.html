@@ -81,6 +81,13 @@
     margin: 0;
     line-height: 1;
   }
+  .tm {
+    font-size: 0.32em;
+    font-weight: 400;
+    vertical-align: super;
+    color: var(--text-dim);
+    margin-left: 0.05em;
+  }
   .hand-icon {
     display: inline-block;
     width: 1.1em;
@@ -287,7 +294,7 @@
           <rect x="12" y="52" width="11" height="32" rx="5.5" transform="rotate(-38 17.5 68)" />
         </g>
       </svg>
-      Manoo
+      Manoo<span class="tm">™</span>
     </h1>
     <p class="tagline" data-i18n="tagline">
       Gives <strong>Claude Code</strong> hands. Screenshot, click, type,
@@ -347,6 +354,8 @@
     <a href="terminos.html" data-i18n="footerTerms">Términos de Servicio</a>
     &nbsp;·&nbsp;
     <a href="privacidad.html" data-i18n="footerPrivacy">Aviso de Privacidad</a>
+    <br />
+    <span data-i18n="footerCopyright">© 2026 Jamiel García Velázquez. All rights reserved.</span>
   </footer>
   <div id="email-toast" role="status"></div>
   <script>
@@ -387,6 +396,7 @@
       footer: { en: 'Manoo by Corporación Jamiel', es: 'Manoo por Corporación Jamiel' },
       footerTerms: { en: 'Terms of Service', es: 'Términos de Servicio' },
       footerPrivacy: { en: 'Privacy Notice', es: 'Aviso de Privacidad' },
+      footerCopyright: { en: '© 2026 Jamiel García Velázquez. All rights reserved.', es: '© 2026 Jamiel García Velázquez. Todos los derechos reservados.' },
       emailCopied: { en: 'Email copied: ', es: 'Correo copiado: ' }
     };
 
