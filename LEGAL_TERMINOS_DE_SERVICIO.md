@@ -41,7 +41,7 @@ Manoo se entrega "tal cual" ("as is"), sin garantías de ningún tipo. Dado que 
 
 ## 6. Pagos y reembolsos
 
-- Los pagos se procesan actualmente de forma manual (transferencia, efectivo) hasta que se active el cobro automático vía Stripe.
+- Los pagos se procesan de forma automática vía Stripe (planes anual y mensual). También se acepta pago manual (transferencia SPEI) para casos particulares.
 - Reembolsos: [definir política — sugerencia: 7 días naturales desde la emisión de la licencia, si no ha sido usada de forma abusiva].
 
 ## 7. Propiedad intelectual

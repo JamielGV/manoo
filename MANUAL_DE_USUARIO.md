@@ -33,9 +33,11 @@ pantalla en vez de solo explicártelo, Claude usa Manoo automáticamente.
   Code queda visible en una mitad de la pantalla, y la aplicación que
   Manoo está usando en la otra — nunca pierdes de vista lo que Claude está
   pensando/diciendo mientras actúa.
-- **Un HUD neon en la esquina:** una ventanita con un punto que sigue al
-  mouse y un texto que destella con lo último que se escribió o qué tecla
-  se presionó — para que veas de un vistazo que Manoo está trabajando.
+- **El cursor del mouse brilla en neón mientras Manoo actúa:** el cursor
+  real de tu sistema (no una ventana aparte) cambia a una mano brillante
+  en cuanto Manoo mueve el mouse o escribe, y regresa a tu cursor normal
+  a los pocos segundos de que Manoo termina — así siempre sabes, de un
+  vistazo, si el mouse se está moviendo solo o lo estás moviendo tú.
 
 ## El botón de emergencia: tú siempre tienes el control
 
@@ -56,16 +58,25 @@ cuando no debía.
 |---|---|---|
 | Acciones | 25 por sesión | Ilimitadas |
 | Registro de auditoría local | No | Sí (`~/.local/share/manoo/audit.log`) |
-| Precio | $0 | $29 USD/año |
+| Precio | $0 | $49 USD/año o $6 USD/mes |
 
 Si llegas al límite de 25 acciones, Claude te lo dirá claramente con un
 mensaje — no necesitas hacer nada más que activar una licencia Pro para
 seguir.
 
+### Comprar Manoo Pro
+
+Entra a [jamielgv.github.io/manoo](https://jamielgv.github.io/manoo/) y
+dale clic a "Obtener Pro" (puedes elegir anual o mensual) — el pago se
+procesa con Stripe, y tu clave de licencia te llega automáticamente por
+correo en cuanto se confirma el pago, sin que nadie tenga que hacer nada
+manual.
+
 ### Activar Manoo Pro
 
-Una vez que tengas tu clave de licencia (te la manda Corporación Jamiel
-después de tu pago), simplemente pídele a Claude:
+Una vez que tengas tu clave de licencia (por correo tras tu compra, o
+directo de Corporación Jamiel si compraste de otra forma), simplemente
+pídele a Claude:
 
 > Activa mi licencia de Manoo con esta clave: `<tu-clave>`
 

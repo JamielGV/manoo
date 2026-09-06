@@ -15,7 +15,7 @@ Los únicos datos personales que recabamos y conservamos son, si compras una lic
 - Tu correo electrónico (para emitir y asociar la licencia).
 - Fecha de emisión y vigencia de la licencia.
 
-No recabamos datos de pago directamente — el procesador de pagos (Stripe) maneja tus datos de pago bajo su propio aviso de privacidad.
+No recabamos datos de pago directamente — el procesador de pagos (Stripe) maneja tus datos de pago bajo su propio aviso de privacidad. Tu correo electrónico también se comparte con nuestro proveedor de envío de correo (Resend) únicamente para entregarte tu licencia — bajo su propio aviso de privacidad.
 
 ## 2. Finalidad del tratamiento
 
