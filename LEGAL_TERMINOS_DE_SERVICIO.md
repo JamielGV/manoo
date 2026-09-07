@@ -1,6 +1,6 @@
 # Términos de Servicio — Manoo
 
-**Última actualización:** [completar fecha de publicación]
+**Última actualización:** 6 de septiembre de 2026
 **Responsable:** Jamiel García Velázquez, persona física, operando bajo
 el nombre comercial "Corporación Jamiel" (nombre comercial únicamente —
 no una persona moral registrada; se actualizará aquí si eso cambia).
@@ -42,7 +42,7 @@ Manoo se entrega "tal cual" ("as is"), sin garantías de ningún tipo. Dado que 
 ## 6. Pagos y reembolsos
 
 - Los pagos se procesan de forma automática vía Stripe (planes anual y mensual). También se acepta pago manual (transferencia SPEI) para casos particulares.
-- Reembolsos: [definir política — sugerencia: 7 días naturales desde la emisión de la licencia, si no ha sido usada de forma abusiva].
+- Reembolsos: 7 días naturales desde la emisión de la licencia, siempre que no se haya hecho un uso abusivo de ella (por ejemplo, superar ampliamente el límite del plan Free antes de pedir el reembolso). Para solicitarlo, el usuario escribe a soporte.
 
 ## 7. Propiedad intelectual
 
