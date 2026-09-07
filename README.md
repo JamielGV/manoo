@@ -21,8 +21,10 @@ limitation to that one IDE.
 
 ## Layout
 
-- `.claude-plugin/marketplace.json` — local marketplace listing so this repo
-  can be added directly with `claude plugin marketplace add <path>`.
+- `.claude-plugin/marketplace.json` — marketplace listing so this repo
+  can be added directly with `claude plugin marketplace add <path-or-url>`
+  — works the same whether `<path-or-url>` is a local path (development)
+  or the public GitHub URL (real installs, see below).
 - `plugin/` — the actual plugin:
   - `.claude-plugin/plugin.json` — plugin manifest
   - `.mcp.json` — wires up the local stdio MCP server (passes `DISPLAY`/
@@ -406,7 +408,36 @@ waiting for the current action's own cleanup.
   verified this actually stops the wrong-window misfire, then verified a
   screenshot+retry immediately afterward lands correctly.
 
-## Test / iterate locally
+## Install (for real users/customers)
+
+```bash
+claude plugin marketplace add https://github.com/JamielGV/manoo
+claude plugin install manoo@manoo-local
+```
+
+Use the full `https://` URL, not the short `owner/repo` form — that form
+defaults to cloning over SSH, which fails for anyone without an SSH key
+set up with GitHub; `https://` works for any public repo with no
+authentication needed. Claude Code clones the repo into its own plugin
+cache and runs `npm ci --ignore-scripts` against `plugin/package.json`
+automatically — no separate `git clone` or manual `npm install` needed.
+
+**This was broken until it was actually tested end-to-end** (2026-09-06):
+`package.json`/`package-lock.json` lived in `plugin/server/`, one level
+below the plugin root, and Claude Code's auto-install only looks for
+them at the root — every real install silently ended up with an empty
+`node_modules` and a server that crashed on startup with
+`Cannot find package '@modelcontextprotocol/sdk'`. Fixed by moving both
+files to `plugin/` (Node's module resolution walks up parent directories
+from `plugin/server/index.mjs`, so no code changes were needed).
+`uiohook-napi`'s native binary selection (`node-gyp-build`) runs inside
+its own `require()`'d code at runtime, not as an install-time lifecycle
+script, so `--ignore-scripts` doesn't affect it. Verified clean:
+uninstalled, removed the marketplace, re-added from the public GitHub
+URL, reinstalled, confirmed `node_modules` was populated and the server
+started without error.
+
+## Test / iterate locally (for development on this plugin itself)
 
 ```bash
 claude plugin marketplace add ~/manoo

@@ -85,7 +85,7 @@ async function handleWebhook(request, env) {
   }
 
   const licenseKey = await mintLicense(email, env.MANOO_PRIVATE_KEY_PEM, licenseDays);
-  await sendLicenseEmail(env, email, licenseKey);
+  await sendLicenseEmail(env, email, licenseKey, licenseDays);
 
   await env.PROCESSED_PAYMENTS.put(`event:${event.id}`, JSON.stringify({ email, invoiceId, at: new Date().toISOString() }), {
     expirationTtl: 60 * 60 * 24 * 400,
@@ -177,10 +177,21 @@ function base64url(bytes) {
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-async function sendLicenseEmail(env, buyerEmail, licenseKey) {
+async function sendLicenseEmail(env, buyerEmail, licenseKey, licenseDays) {
   const subject = "Tu licencia de Manoo Pro";
+  const renewalPeriod = licenseDays >= 100 ? "cada año" : "cada mes";
   const text = [
     "¡Gracias por tu compra de Manoo Pro!",
+    "",
+    "Si todavía no tienes el plugin instalado, instálalo primero (necesitas",
+    "Claude Code y Node.js ya instalados):",
+    "",
+    "  claude plugin marketplace add https://github.com/JamielGV/manoo",
+    "  claude plugin install manoo@manoo-local",
+    "",
+    "(Usa esa URL completa con https://, no la escribas de otra forma —",
+    "así funciona sin necesitar una llave SSH configurada con GitHub.)",
+    "Reinicia tu sesión de Claude Code después de instalar.",
     "",
     "Tu clave de licencia:",
     licenseKey,
@@ -189,7 +200,7 @@ async function sendLicenseEmail(env, buyerEmail, licenseKey) {
     '1. En Claude Code, con el plugin Manoo instalado, pide: "activa mi licencia de Manoo con esta clave: <pega la clave>"',
     "2. O guárdala directamente en ~/.config/manoo/license.key",
     "",
-    "Esta licencia se renueva sola cada año mientras tu suscripción siga activa.",
+    `Esta licencia se renueva sola ${renewalPeriod} mientras tu suscripción siga activa.`,
     "",
     "Cualquier duda, responde este correo.",
     "— Corporación Jamiel",

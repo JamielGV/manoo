@@ -15,9 +15,14 @@ en una sesión normal).
 ## Instalación
 
 ```bash
-claude plugin marketplace add ruta/a/manoo
+claude plugin marketplace add https://github.com/JamielGV/manoo
 claude plugin install manoo@manoo-local
 ```
+
+No necesitas clonar el repositorio tú mismo ni instalar nada aparte —
+Claude Code descarga el plugin e instala sus dependencias solo. Usa la
+URL completa con `https://` (no la forma corta `usuario/repo`) para que
+funcione aunque no tengas una llave SSH configurada con GitHub.
 
 Reinicia tu sesión de Claude Code después de instalar. Desde ese momento,
 en cualquier conversación puedes pedirle a Claude que actúe directamente
