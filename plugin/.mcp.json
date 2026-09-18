@@ -2,8 +2,8 @@
   "mcpServers": {
     "computer-use": {
       "type": "stdio",
-      "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/server/index.mjs"],
+      "command": "bash",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/run.sh"],
       "env": {
         "DISPLAY": "${DISPLAY}",
         "XAUTHORITY": "${XAUTHORITY}",
