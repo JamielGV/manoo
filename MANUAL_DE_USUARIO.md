@@ -8,7 +8,10 @@ en una sesión normal).
 
 ## Requisitos
 
-- Linux con X11 (no funciona todavía en Wayland ni en macOS/Windows).
+- Linux con X11, o macOS (soporte de macOS recién agregado y aún sin
+  probar en una Mac real - el control de ventanas podría fallar).
+  Windows: el mouse/teclado/screenshot funcionan, pero listar/enfocar/
+  dividir ventanas todavía no. Linux con Wayland tampoco funciona todavía.
 - Claude Code instalado.
 - Node.js (para correr el servidor de Manoo).
 
@@ -104,8 +107,12 @@ mi estado de licencia de Manoo?"*.
 ## Preguntas frecuentes
 
 **¿Funciona en macOS o Windows?**
-No todavía — es un prototipo para Linux/X11. Si usas Wayland (por ejemplo,
-Ubuntu reciente por defecto), tampoco funciona aún.
+En macOS, en principio sí (recién agregado), pero todavía no se ha probado
+en una Mac real — el control de ventanas (listar/enfocar/dividir pantalla)
+podría no funcionar bien hasta confirmarlo en hardware real. En Windows,
+el mouse/teclado/captura de pantalla ya funcionan, pero el control de
+ventanas todavía no se ha implementado. Si usas Linux con Wayland (por
+ejemplo, Ubuntu reciente por defecto), tampoco funciona aún.
 
 **¿Qué pasa si muevo el mouse sin querer mientras Manoo actúa?**
 Se detiene la siguiente acción y Claude te avisa. Vuelve a pedirle que

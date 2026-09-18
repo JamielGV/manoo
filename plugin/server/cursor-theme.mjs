@@ -139,8 +139,12 @@ function setThemeViaXrdb(themeName) {
 
 /** Switches the real cursor to the neon-glow version. No-op (never
  * throws) if this isn't an XFCE session or anything else goes wrong —
- * this is a nice-to-have, never something an action should fail over. */
+ * this is a nice-to-have, never something an action should fail over.
+ * Explicitly skipped on non-Linux: macOS/Windows have no xrdb/xfconf
+ * equivalent here yet (tracked as a gap, not silently attempted) - the
+ * user's real cursor just stays whatever it already was. */
 export async function applyNeonCursor() {
+  if (process.platform !== "linux") return;
   try {
     if (originalThemeName === null) {
       originalThemeName = (await getCurrentThemeName()) || "Adwaita";
