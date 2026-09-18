@@ -33,7 +33,12 @@ const LIST_WINDOWS_JXA = `
 function run() {
   var se = Application("System Events");
   var out = [];
-  var procs = se.processes();
+  // Bug real detectado 2026-09-18 (probado en hardware real): iterar
+  // TODOS los procesos (se.processes()) incluye procesos de fondo sin UI
+  // que no responden a eventos de Apple, y System Events truena con
+  // "Timeout" (-1712) esperando su respuesta. Filtrar a procesos visibles
+  // evita preguntarle a un proceso que nunca va a contestar.
+  var procs = se.processes.whose({ visible: true })();
   for (var i = 0; i < procs.length; i++) {
     var p = procs[i];
     var wins;
@@ -186,7 +191,15 @@ function run(argv) {
   if (procs.length === 0) return "not-found";
   var win = procs[0].windows[idx];
   try {
-    win.attributes.byName("AXMinimized").value = true;
+    // Bug real detectado 2026-09-18 (probado en hardware real): reading
+    // an attribute's value in JXA needs .value() called as a function,
+    // not accessed as a bare property - a bare ".value" (get OR set)
+    // threw "Cannot convert types" every time, so this silently never
+    // minimized anything (swallowed by this same try/catch). Confirmed
+    // working: bracket-indexed .attributes["AXMinimized"] (byName(...)
+    // was not re-verified for the SET path specifically, kept as
+    // bracket notation since that's what was actually proven live).
+    win.attributes["AXMinimized"].value = true;
   } catch (e) {}
   return "ok";
 }
