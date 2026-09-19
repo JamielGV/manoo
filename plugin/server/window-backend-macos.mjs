@@ -6,12 +6,14 @@
 // permission category nut-js's own synthetic mouse/keyboard input already
 // needs there, so this doesn't add a new consent prompt class.
 //
-// UNVERIFIED ON REAL HARDWARE: written from documented JXA/System Events
-// behavior, but there was no macOS machine available to test this against
-// while writing it. Treat as a first pass - confirm each primitive
-// (listWindows, placeWindow, activateWindow, minimizeWindow) against a
-// real window before relying on it, the same way the Linux backend's own
-// comments describe bugs that were only found by testing live.
+// Confirmed on real hardware 2026-09-18 — see the "Bug real detectado"
+// comments below (listWindows' visible-processes filter, minimizeWindow's
+// bracket-notation attribute set) for what testing live actually turned
+// up, the same way the Linux backend's own comments describe bugs that
+// were only found by testing live. placeWindow/activateWindow have not
+// been separately called out with their own real-hardware bug reports —
+// exercise them directly before assuming they're as solid as the two
+// primitives above.
 //
 // Window ids here are synthesized as "pid:index" from a fresh listWindows()
 // snapshot each time (macOS/Accessibility windows have no wmctrl-style

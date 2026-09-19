@@ -7,12 +7,13 @@ MCP server, so it can act directly on screen instead of only describing
 steps. Screenshot/mouse/keyboard work on Linux, macOS and Windows (via
 `nut-js`). Window management (list/focus/split-screen) has a Linux/X11
 backend (`wmctrl`, well-tested) and a macOS backend (System Events/JXA,
-**written but not yet verified on real hardware** — no Mac was available
-while building it, see `window-backend-macos.mjs`); Windows window
-management isn't implemented yet (tracked as a gap, degrades to a safe
-no-op rather than crashing). The neon-cursor visual feedback and the
-physical-mouse-lock safety feature are Linux/X11-only for now and no-op
-elsewhere. Everything runs locally — nothing leaves the machine.
+**confirmed working on real hardware 2026-09-18** — see
+`window-backend-macos.mjs`); Windows window management isn't implemented
+yet (tracked as a gap, degrades to a safe no-op rather than crashing).
+The neon-cursor visual feedback and the physical-mouse-lock safety
+feature are Linux/X11-only for now; macOS has its own cursor mechanism
+with narrower verification — see Known limitations below for both.
+Everything runs locally — nothing leaves the machine.
 
 Works generally with **any** app hosting Claude Code — VSCode, a plain
 terminal, JetBrains, Antigravity, whatever — not scoped to one specific
@@ -465,14 +466,22 @@ Then restart the Claude Code session for the MCP server process to reload.
 ## Known limitations (tracked, not yet fixed)
 
 - Window management on Linux requires X11 — will not work under Wayland.
-- macOS window management (`window-backend-macos.mjs`) is unverified on
-  real hardware — written from documented JXA/System Events behavior, no
-  Mac was available to test each primitive live the way the Linux backend
-  was. Needs a real run-through before it's trusted the way Linux is.
+- macOS window management (`window-backend-macos.mjs`) has been confirmed
+  on real hardware (2026-09-18: found and fixed a real `minimizeWindow`
+  bug there) — still newer/less battle-tested than the Linux backend, but
+  no longer just "written from documented behavior, never run."
 - Windows has no window-management backend yet — screenshot/mouse/keyboard
   work there (nut-js), but list/focus/split-screen degrade to a safe no-op.
-- Neon-cursor feedback and the physical-mouse-lock safety feature are
-  Linux/X11-only (`xrdb`/`xfconf-query`/`xinput`) — no-op elsewhere.
+- Neon-cursor feedback: Linux/X11 (`xrdb`/`xfconf-query`) swaps the real
+  system cursor theme; macOS (`cursor-theme-macos.mjs`) instead overlays
+  an always-on-top window tracking the real pointer — same intended
+  visual result, different mechanism. Confirmed live (2026-09-19),
+  including a real screenshot showing the glowing hand rendered
+  correctly over other windows. Not yet confirmed: multi-monitor, full-
+  screen Spaces, and the 4-frame pulse animation over time (only a
+  single static frame was checked). No-op on Windows.
+- The physical-mouse-lock safety feature is Linux/X11-only (`xinput`) —
+  no-op elsewhere.
 - No accessibility-tree reading — coordinates come from Claude visually
   reading screenshots, not structured UI metadata.
 - No usage metering beyond the in-process free-tier cap, no macro

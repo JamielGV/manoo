@@ -4,6 +4,11 @@
 // user reported it wasn't what "neon cursor" should mean, and they were
 // right — a detached mini-map dot isn't a glow on the actual pointer).
 //
+// This file is the Linux/X11 mechanism specifically (Xcursor theme +
+// xfconf, both below). macOS has no equivalent to swap into and instead
+// gets its own overlay-window approach in cursor-theme-macos.mjs,
+// dispatched to from applyNeonCursor()/restoreCursorTheme() below.
+//
 // Sets the cursor theme through TWO independent channels, since real
 // testing showed different apps only listen to one or the other:
 //   - `xrdb -merge -` writes Xcursor.theme straight into the X server's
@@ -46,6 +51,7 @@ import { mkdir, copyFile, symlink, unlink } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import * as macosCursor from "./cursor-theme-macos.mjs";
 
 const execFileAsync = promisify(execFile);
 const THEME_NAME = "manoo-neon";
@@ -140,10 +146,16 @@ function setThemeViaXrdb(themeName) {
 /** Switches the real cursor to the neon-glow version. No-op (never
  * throws) if this isn't an XFCE session or anything else goes wrong —
  * this is a nice-to-have, never something an action should fail over.
- * Explicitly skipped on non-Linux: macOS/Windows have no xrdb/xfconf
- * equivalent here yet (tracked as a gap, not silently attempted) - the
- * user's real cursor just stays whatever it already was. */
+ * macOS gets its own overlay-based mechanism (see cursor-theme-macos.mjs
+ * — no Xcursor/xfconf equivalent exists there, so it can't reuse this
+ * one). Still explicitly skipped on Windows: no equivalent built yet
+ * there either (tracked as a gap, not silently attempted) - the user's
+ * real cursor just stays whatever it already was. */
 export async function applyNeonCursor() {
+  if (process.platform === "darwin") {
+    macosCursor.applyNeonCursor();
+    return;
+  }
   if (process.platform !== "linux") return;
   try {
     if (originalThemeName === null) {
@@ -176,6 +188,10 @@ function restoreSync() {
  * between tasks and again when it stops operating entirely, alongside
  * the window-layout and mouse-lock restores. */
 export function restoreCursorTheme() {
+  if (process.platform === "darwin") {
+    macosCursor.restoreCursorTheme();
+    return;
+  }
   restoreSync();
 }
 

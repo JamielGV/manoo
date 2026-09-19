@@ -35,17 +35,45 @@ clic en el botón de guardar"*, *"revisa qué dice esa ventana"*.
 No necesitas invocar nada especial: si le pides a Claude que haga algo en
 pantalla en vez de solo explicártelo, Claude usa Manoo automáticamente.
 
+### Permisos que debes dar en macOS antes de usar Manoo
+
+En macOS, el sistema operativo exige que apruebes manualmente varios
+permisos de privacidad para la app que corre tu sesión de Claude Code
+(Terminal, iTerm, la IDE que uses, etc. — la que realmente ejecuta el
+proceso del servidor de Manoo). Sin ellos, las acciones de Manoo fallan
+en silencio o macOS ni siquiera muestra el diálogo de permiso. Otórgalos
+desde **Ajustes del Sistema > Privacidad y Seguridad**, buscando esa app
+en cada una de estas categorías y activando su casilla:
+
+1. **Accesibilidad** — para que Manoo pueda mover el mouse y escribir de
+   verdad, y para que pueda listar, enfocar, mover y dividir ventanas.
+2. **Grabación de pantalla** — para que Manoo pueda tomar capturas de tu
+   pantalla y así saber qué hay antes de actuar.
+3. **Monitoreo de entrada** — para que el botón de emergencia funcione:
+   Manoo necesita poder detectar cuándo tú tocas el mouse o el teclado de
+   verdad, en cualquier ventana, para detenerse al instante.
+4. **Automatización** — la primera vez que Manoo intente organizar
+   ventanas, macOS te pedirá autorizar que esa app controle "Eventos del
+   sistema" (System Events); acepta ese diálogo cuando aparezca.
+
+Si ya usaste Manoo y algo (mover el mouse, tomar una captura, detectar el
+botón de emergencia) no está funcionando, revisa primero que estos cuatro
+permisos sigan activos — macOS a veces los desactiva solos tras una
+actualización del sistema.
+
 ## Qué verás mientras Manoo trabaja
 
 - **La pantalla se divide sola:** el IDE con la conversación de Claude
   Code queda visible en una mitad de la pantalla, y la aplicación que
   Manoo está usando en la otra — nunca pierdes de vista lo que Claude está
   pensando/diciendo mientras actúa.
-- **El cursor del mouse brilla en neón mientras Manoo actúa:** el cursor
-  real de tu sistema (no una ventana aparte) cambia a una mano brillante
-  en cuanto Manoo mueve el mouse o escribe, y regresa a tu cursor normal
-  a los pocos segundos de que Manoo termina — así siempre sabes, de un
-  vistazo, si el mouse se está moviendo solo o lo estás moviendo tú.
+- **El cursor del mouse brilla en neón mientras Manoo actúa:** en cuanto
+  Manoo mueve el mouse o escribe, el cursor se ve como una mano
+  brillante, y regresa a la normalidad a los pocos segundos de que Manoo
+  termina — así siempre sabes, de un vistazo, si el mouse se está
+  moviendo solo o lo estás moviendo tú. (En Linux esto reemplaza el
+  cursor real del sistema; en macOS es una superposición que sigue al
+  cursor real — el efecto visual es el mismo.)
 
 ## El botón de emergencia: tú siempre tienes el control
 
@@ -107,12 +135,17 @@ mi estado de licencia de Manoo?"*.
 ## Preguntas frecuentes
 
 **¿Funciona en macOS o Windows?**
-En macOS, en principio sí (recién agregado), pero todavía no se ha probado
-en una Mac real — el control de ventanas (listar/enfocar/dividir pantalla)
-podría no funcionar bien hasta confirmarlo en hardware real. En Windows,
-el mouse/teclado/captura de pantalla ya funcionan, pero el control de
-ventanas todavía no se ha implementado. Si usas Linux con Wayland (por
-ejemplo, Ubuntu reciente por defecto), tampoco funciona aún.
+En macOS sí — control de ventanas (listar/enfocar/dividir pantalla) y
+cursor neón ya confirmados en hardware real, con captura de pantalla
+real de por medio para el cursor. El cursor neón en macOS corre de
+forma distinta que en Linux (una superposición que sigue al cursor
+real, en vez de reemplazar el cursor del sistema) pero se ve igual.
+Sigue siendo más nuevo que la versión de Linux — si notas algo raro
+(varios monitores, apps en pantalla completa), avísanos. En Windows, el
+mouse/teclado/captura de pantalla ya funcionan, pero el control de
+ventanas y el cursor neón todavía no se han implementado. Si usas Linux
+con Wayland (por ejemplo, Ubuntu reciente por defecto), tampoco funciona
+aún.
 
 **¿Qué pasa si muevo el mouse sin querer mientras Manoo actúa?**
 Se detiene la siguiente acción y Claude te avisa. Vuelve a pedirle que
